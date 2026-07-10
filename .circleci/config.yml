@@ -3,22 +3,28 @@ version: 2.1
 jobs:
   build:
     docker:
-      - image: cimg/android:2023.10
+      - image: cimg/android:2024.12  # بيئة تشغيل محدثة متوافقة مع متطلبات أندرويد 15
     steps:
       - checkout
+
       - run:
           name: Decode Keystore
           command: echo $CM_KEYSTORE_BASE64 | base64 --decode > app/upload-keystore.jks
+
       - run:
           name: Build Release APK
           command: ./gradlew assembleRelease
+
+      # تم إدراج أمر حفظ التطبيق الناتج هنا لتتمكن من تحميله مباشرة من منصة CircleCI
+      - store_artifacts:
+          path: app/build/outputs/apk/release/
+          destination: release-apk
+
       - run:
           name: Fallback Hook
           command: |
-            if [ $? -ne 0 ]; then
-              echo "Build failed, triggering fallback hook..."
-              # Add fallback logic here
-            fi
+            echo "Build failed, triggering fallback hook..."
+          when: on_fail
 
 workflows:
   version: 2
@@ -28,4 +34,4 @@ workflows:
           filters:
             branches:
               only:
-                - main
+                - main  # تفعيل البناء التلقائي عند التحديث على الفرع الرئيسي
