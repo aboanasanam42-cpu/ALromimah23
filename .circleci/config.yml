@@ -1,0 +1,31 @@
+version: 2.1
+
+jobs:
+  build:
+    docker:
+      - image: cimg/android:2023.10
+    steps:
+      - checkout
+      - run:
+          name: Decode Keystore
+          command: echo $CM_KEYSTORE_BASE64 | base64 --decode > app/upload-keystore.jks
+      - run:
+          name: Build Release APK
+          command: ./gradlew assembleRelease
+      - run:
+          name: Fallback Hook
+          command: |
+            if [ $? -ne 0 ]; then
+              echo "Build failed, triggering fallback hook..."
+              # Add fallback logic here
+            fi
+
+workflows:
+  version: 2
+  build-and-deploy:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only:
+                - main

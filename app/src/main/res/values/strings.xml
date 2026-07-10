@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">CloudWorkerAI</string>
+    <string name="welcome_message">Welcome to CloudWorker AI</string>
+    <string name="local_mode">العمل عبر التطبيق</string>
+    <string name="cloud_mode">العمل عبر السحابة</string>
+    <string name="hybrid_mode">الوضع المزدوج</string>
+</resources>
