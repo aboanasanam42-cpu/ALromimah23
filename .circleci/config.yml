@@ -12,6 +12,14 @@ jobs:
           command: echo $CM_KEYSTORE_BASE64 | base64 --decode > app/upload-keystore.jks
 
       - run:
+          name: Setup Gradle Wrapper
+          command: |
+            wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -P /tmp/
+            unzip -q /tmp/gradle-8.6-bin.zip -d /tmp/gradle/
+            /tmp/gradle/gradle-8.6/bin/gradle wrapper --gradle-version=8.6
+            chmod +x gradlew
+
+      - run:
           name: Build Release APK
           command: ./gradlew assembleRelease
 
