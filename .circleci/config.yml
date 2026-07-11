@@ -13,7 +13,20 @@ jobs:
 
       - run:
           name: Decode Google Services JSON
-          command: printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          command: |
+            if [ -n "${GOOGLE_SERVICES_JSON_BASE64}" ]; then
+              printf '%s' "${GOOGLE_SERVICES_JSON_BASE64}" | base64 --decode > app/google-services.json
+              if ! python3 -c "import json; json.load(open('app/google-services.json'))" 2>/dev/null; then
+                echo "ERROR: Decoded google-services.json is not valid JSON."
+                echo "Check that GOOGLE_SERVICES_JSON_BASE64 is base64-encoded (not raw JSON)."
+                echo "First 200 chars of decoded output:"
+                head -c 200 app/google-services.json
+                exit 1
+              fi
+              echo "google-services.json decoded and validated successfully."
+            else
+              echo "GOOGLE_SERVICES_JSON_BASE64 is not set — using placeholder google-services.json from repo."
+            fi
 
       - run:
           name: Setup Gradle Wrapper
