@@ -13,7 +13,14 @@ jobs:
 
       - run:
           name: Decode Google Services JSON
-          command: printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
+          command: |
+            printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" \
+              | tr -d '[:space:]' \
+              | base64 --decode --ignore-garbage \
+              > app/google-services.json
+            python3 -m json.tool app/google-services.json > /dev/null \
+              && echo "google-services.json is valid JSON" \
+              || { echo "ERROR: google-services.json is not valid JSON"; exit 1; }
 
       - run:
           name: Setup Gradle Wrapper
