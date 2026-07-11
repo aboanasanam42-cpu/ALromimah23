@@ -9,11 +9,11 @@ jobs:
 
       - run:
           name: Decode Keystore
-          command: echo $CM_KEYSTORE_BASE64 | base64 --decode > app/upload-keystore.jks
+          command: printf '%s' "$CM_KEYSTORE_BASE64" | base64 --decode > app/upload-keystore.jks
 
       - run:
           name: Decode Google Services JSON
-          command: echo $GOOGLE_SERVICES_JSON_BASE64 | base64 --decode > app/google-services.json
+          command: printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > app/google-services.json
 
       - run:
           name: Setup Gradle Wrapper
