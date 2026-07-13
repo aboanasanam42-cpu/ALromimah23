@@ -8,8 +8,8 @@ jobs:
     environment:
       GRADLE_OPTS: >-
         -Dorg.gradle.daemon=false
-        -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m
-        -Dkotlin.incremental=false
+        -Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m
+        -Dkotlin.incremental=true
       TERM: dumb
     steps:
       - checkout
@@ -49,10 +49,6 @@ jobs:
             chmod +x gradlew
 
       - run:
-          name: Download Dependencies
-          command: ./gradlew dependencies --no-build-cache -q || true
-
-      - run:
           name: Build Release APK and AAB
           command: ./gradlew assembleRelease bundleRelease --build-cache --stacktrace
 
@@ -79,3 +75,4 @@ workflows:
             branches:
               only:
                 - main
+                
