@@ -13,7 +13,16 @@ jobs:
 
       - run:
           name: Decode Google Services JSON
-          command: printf '%s' "$GOOGLE_SERVICES_JSON_BASE64" | tr -d '[:space:]' | base64 --decode > app/google-services.json
+          command: |
+            python3 - << 'PYEOF'
+            import base64, os
+            raw = ''.join(os.environ['GOOGLE_SERVICES_JSON_BASE64'].split())
+            try:
+                data = base64.b64decode(raw + '=' * (-len(raw) % 4))
+            except Exception:
+                data = base64.urlsafe_b64decode(raw + '=' * (-len(raw) % 4))
+            open('app/google-services.json', 'wb').write(data)
+            PYEOF
 
       - run:
           name: Setup Gradle Wrapper
