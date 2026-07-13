@@ -6,10 +6,7 @@ jobs:
       - image: cimg/android:2025.04.1
     resource_class: large
     environment:
-      GRADLE_OPTS: >-
-        -Dorg.gradle.daemon=false
-        -Dorg.gradle.jvmargs=-Xmx6g -XX:MaxMetaspaceSize=1024m
-        -Dkotlin.incremental=true
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Xmx4g -XX:MaxMetaspaceSize=512m -Dkotlin.incremental=false"
       TERM: dumb
     steps:
       - checkout
@@ -21,7 +18,7 @@ jobs:
       - run:
           name: Decode Google Services JSON
           command: |
-            python3 - << 'PYEOF'
+            python3 - \<< 'PYEOF'
             import base64, os, json, sys
 
             def padded(s):
@@ -84,7 +81,8 @@ jobs:
 
       - run:
           name: Build Release APK and AAB
-          command: ./gradlew assembleRelease bundleRelease --build-cache --stacktrace
+          no_output_timeout: 30m
+          command: ./gradlew assembleRelease bundleRelease --build-cache --parallel --stacktrace
 
       - save_cache:
           paths:
@@ -104,9 +102,4 @@ workflows:
   version: 2
   build-and-deploy:
     jobs:
-      - build:
-          filters:
-            branches:
-              only:
-                - main
-                
+      - build
