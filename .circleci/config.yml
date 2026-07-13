@@ -4,6 +4,13 @@ jobs:
   build:
     docker:
       - image: cimg/android:2025.04.1
+    resource_class: large
+    environment:
+      GRADLE_OPTS: >-
+        -Dorg.gradle.daemon=false
+        -Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=512m
+        -Dkotlin.incremental=false
+      TERM: dumb
     steps:
       - checkout
 
@@ -24,28 +31,44 @@ jobs:
             open('app/google-services.json', 'wb').write(data)
             PYEOF
 
+      - restore_cache:
+          keys:
+            - gradle-v2-{{ checksum "build.gradle.kts" }}-{{ checksum "app/build.gradle.kts" }}
+            - gradle-v2-{{ checksum "build.gradle.kts" }}
+            - gradle-v2-
+
       - run:
           name: Setup Gradle Wrapper
           command: |
-            wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -P /tmp/
-            unzip -q /tmp/gradle-8.6-bin.zip -d /tmp/gradle/
-            /tmp/gradle/gradle-8.6/bin/gradle wrapper --gradle-version=8.6
+            if [ ! -f gradlew ]; then
+              wget -q https://services.gradle.org/distributions/gradle-8.6-bin.zip -P /tmp/
+              unzip -q /tmp/gradle-8.6-bin.zip -d /tmp/gradle/
+              /tmp/gradle/gradle-8.6/bin/gradle wrapper --gradle-version=8.6
+              rm -rf /tmp/gradle /tmp/gradle-8.6-bin.zip
+            fi
             chmod +x gradlew
 
       - run:
-          name: Build Release APK
-          command: ./gradlew assembleRelease
+          name: Download Dependencies
+          command: ./gradlew dependencies --no-build-cache -q || true
 
-      # تم إدراج أمر حفظ التطبيق الناتج هنا لتتمكن من تحميله مباشرة من منصة CircleCI
+      - run:
+          name: Build Release APK and AAB
+          command: ./gradlew assembleRelease bundleRelease --build-cache --stacktrace
+
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+          key: gradle-v2-{{ checksum "build.gradle.kts" }}-{{ checksum "app/build.gradle.kts" }}
+
       - store_artifacts:
           path: app/build/outputs/apk/release/
           destination: release-apk
 
-      - run:
-          name: Fallback Hook
-          command: |
-            echo "Build failed, triggering fallback hook..."
-          when: on_fail
+      - store_artifacts:
+          path: app/build/outputs/bundle/release/
+          destination: release-aab
 
 workflows:
   version: 2
@@ -55,4 +78,4 @@ workflows:
           filters:
             branches:
               only:
-                - main  # تفعيل البناء التلقائي عند التحديث على الفرع الرئيسي
+                - main
