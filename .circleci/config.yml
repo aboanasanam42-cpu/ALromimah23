@@ -22,13 +22,47 @@ jobs:
           name: Decode Google Services JSON
           command: |
             python3 - << 'PYEOF'
-            import base64, os
+            import base64, os, json, sys
+
+            def padded(s):
+                return s + '=' * (-len(s) % 4)
+
+            def valid_json(b):
+                try:
+                    json.loads(b)
+                    return True
+                except Exception:
+                    return False
+
             raw = ''.join(os.environ['GOOGLE_SERVICES_JSON_BASE64'].split())
-            try:
-                data = base64.b64decode(raw + '=' * (-len(raw) % 4))
-            except Exception:
-                data = base64.urlsafe_b64decode(raw + '=' * (-len(raw) % 4))
-            open('app/google-services.json', 'wb').write(data)
+
+            candidates = []
+            for decode_fn in (base64.b64decode, base64.urlsafe_b64decode):
+                try:
+                    candidates.append(decode_fn(padded(raw)))
+                except Exception:
+                    pass
+
+            # Handle double-encoded case (base64 of base64)
+            for first_pass in list(candidates):
+                try:
+                    inner = ''.join(first_pass.decode('ascii', errors='ignore').split())
+                    for decode_fn in (base64.b64decode, base64.urlsafe_b64decode):
+                        try:
+                            candidates.append(decode_fn(padded(inner)))
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+
+            for data in candidates:
+                if valid_json(data):
+                    open('app/google-services.json', 'wb').write(data)
+                    print("google-services.json decoded successfully")
+                    sys.exit(0)
+
+            print("ERROR: no decoding strategy produced valid JSON", file=sys.stderr)
+            sys.exit(1)
             PYEOF
 
       - restore_cache:
