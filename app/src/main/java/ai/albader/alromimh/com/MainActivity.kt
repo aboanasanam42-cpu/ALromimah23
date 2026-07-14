@@ -18,11 +18,12 @@ import io.github.jan-tennert.supabase.realtime.Realtime
 class MainActivity : ComponentActivity() {
 
     companion object {
-        // سنضع هنا رابط مشروعك ومفتاح الـ Anon الخاص بـ Supabase لاحقاً
-        const val SUPABASE_URL = "https://your-project-id.supabase.co"
-        const val SUPABASE_ANON_KEY = "your-anon-key-here"
+        // تم ربط موقعك بنجاح
+        const val SUPABASE_URL = "https://xvuniotkyrvdlgxlhotq.supabase.co"
+        
+        // تم ربط مفتاح الأمان الطويل الخاص بك بنجاح
+        const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dW5pb3RreXJ2ZGxneGxob3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNDQ5NDksImV4cCI6MjA5OTYyMDk0OX0.4UrHxa54lJnWBF5KuRCB7L40BW8CgaSYIB6GSfn8dp0"
 
-        // كائن الاتصال الرئيسي بـ Supabase
         val supabase = createSupabaseClient(
             supabaseUrl = SUPABASE_URL,
             supabaseKey = SUPABASE_ANON_KEY
@@ -42,7 +43,6 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    // تشغيل شاشة تسجيل الدخول مباشرة وبأمان
                     LoginScreen()
                 }
             }
