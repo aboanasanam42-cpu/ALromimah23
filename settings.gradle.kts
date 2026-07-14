@@ -9,8 +9,9 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
-        mavenCentral()
+        mavenCentral() // هذا السطر هو المفتاح لحل مشكلة تحميل مكتبات Supabase
     }
 }
-rootProject.name = "CloudWorkerAI"
+
+rootProject.name = "Alromimah23"
 include(":app")
