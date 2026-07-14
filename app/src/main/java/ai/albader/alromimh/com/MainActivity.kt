@@ -10,7 +10,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import ai.albader.alromimh.com.auth.login.LoginScreen
-import ai.albader.alromimh.com.ui.theme.CloudworkerAITheme
+import ai.albader.alromimh.com.ui.theme.CloudWorkerAITheme
 import com.google.firebase.FirebaseApp // استيراد مكتبة فايربيس
 
 class MainActivity : ComponentActivity() {
@@ -27,17 +27,12 @@ class MainActivity : ComponentActivity() {
 
         // 2. عرض الواجهة الرسومية
         setContent {
-            CloudworkerAITheme {
+            CloudWorkerAITheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    try {
-                        LoginScreen()
-                    } catch (e: Exception) {
-                        Log.e("MainActivity", "Error rendering LoginScreen", e)
-                        // في حال وجود خطأ داخلي في الشاشة، لن يتجمد التطبيق بل سيعرض خطأ واضحاً
-                    }
+                    LoginScreen()
                 }
             }
         }
