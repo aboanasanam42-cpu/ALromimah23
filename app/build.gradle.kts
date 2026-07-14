@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    // تم إزالة إضافة com.google.gms.google-services لأننا استغنينا عن Firebase
+    // تم حذف com.google.gms.google-services من هنا نهائياً لمنع تعليق التطبيق
 }
 
 android {
@@ -58,7 +58,6 @@ android {
 }
 
 dependencies {
-
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.6.2")
     implementation("androidx.activity:activity-compose:1.8.1")
@@ -69,13 +68,11 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    // --- مكتبات Supabase المضافة حديثاً وبديلة Firebase ---
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.0") // لقواعد البيانات
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.0")      // لتسجيل الدخول والمصادقة
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.0")  // للتحديث اللحظي للبيانات
-    
-    // محرك الاتصال Ktor المطلوبة لعمل Supabase في بيئة الأندرويد
-    implementation("io.ktor:ktor-client-android:2.3.12")
+    // --- مكتبات Supabase الجديدة (بديلة Firebase) ---
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.0")
+    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.0")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.0")
+    implementation("io.ktor:ktor-client-android:2.3.12") // محرك الاتصال
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
