@@ -5,34 +5,58 @@ import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import ai.albader.alromimh.com.auth.login.LoginScreen
-import ai.albader.alromimh.com.ui.theme.CloudWorkerAITheme
-import com.google.firebase.FirebaseApp // استيراد مكتبة فايربيس
+import ai.albader.alromimh.com.ui.theme.CloudworkerAITheme
+import com.google.firebase.FirebaseApp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // 1. تهيئة Firebase بشكل آمن لمنع الانهيار عند التشغيل
+        // 1. تهيئة Firebase بشكل آمن تماماً
+        var isFirebaseInitialized = true
         try {
             FirebaseApp.initializeApp(this)
         } catch (e: Exception) {
-            Log.e("MainActivity", "Firebase initialization failed", e)
-            Toast.makeText(this, "خطأ في تهيئة الخدمات السحابية", Toast.LENGTH_LONG).show()
+            isFirebaseInitialized = false
+            Log.e("MainActivity", "Firebase Initialization Failed: ${e.message}", e)
         }
 
-        // 2. عرض الواجهة الرسومية
         setContent {
-            CloudWorkerAITheme {
+            CloudworkerAITheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    LoginScreen()
+                    if (!isFirebaseInitialized) {
+                        // في حال فشل تشغيل Firebase، يتم عرض رسالة توضيحية بدلاً من الشاشة السوداء
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = "خطأ في تهيئة Firebase. تحقق من ملف google-services.json")
+                        }
+                    } else {
+                        // محاولة تشغيل شاشة الدخول بشكل آمن
+                        try {
+                            LoginScreen()
+                        } catch (e: Exception) {
+                            Log.e("MainActivity", "LoginScreen Rendering Error: ${e.message}", e)
+                            Box(
+                                modifier = Modifier.fillMaxSize(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(text = "حدث خطأ أثناء تشغيل شاشة الدخول: ${e.localizedMessage}")
+                            }
+                        }
+                    }
                 }
             }
         }
