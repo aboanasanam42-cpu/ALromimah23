@@ -20,23 +20,18 @@ jobs:
         java-version: '17'
         distribution: 'temurin'
         cache: gradle
-        # تحديد مسار ملف build.gradle.kts ليتم فحص الكاش الخاص به بشكل صحيح
-        cache-dependency-path: ALromimah23-main/build.gradle.kts
 
     - name: Grant execute permission for gradlew
       run: chmod +x gradlew
-      working-directory: ALromimah23-main
 
     - name: Build with Gradle
       run: ./gradlew build
-      working-directory: ALromimah23-main
 
     - name: Build Debug APK
       run: ./gradlew assembleDebug
-      working-directory: ALromimah23-main
 
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
         name: debug-apk
-        path: ALromimah23-main/app/build/outputs/apk/debug/app-debug.apk
+        path: app/build/outputs/apk/debug/app-debug.apk
