@@ -15,6 +15,50 @@ jobs:
           name: Grant execute permission for gradlew
           command: chmod +x gradlew
       - run:
+          name: Create placeholder Android resources for CI
+          command: |
+            python3 \<< 'PYEOF'
+            import struct, zlib, os
+
+            def make_png(w, h, r=63, g=81, b=181):
+                def chunk(name, data):
+                    c = name + data
+                    return struct.pack('>I', len(data)) + c + struct.pack('>I', zlib.crc32(c) & 0xffffffff)
+                sig = b'\x89PNG\r\n\x1a\n'
+                ihdr = chunk(b'IHDR', struct.pack('>IIBBBBB', w, h, 8, 2, 0, 0, 0))
+                raw = b''.join(b'\x00' + bytes([r, g, b] * w) for _ in range(h))
+                idat = chunk(b'IDAT', zlib.compress(raw))
+                iend = chunk(b'IEND', b'')
+                return sig + ihdr + idat + iend
+
+            densities = [
+                ('mipmap-mdpi',    48),
+                ('mipmap-hdpi',    72),
+                ('mipmap-xhdpi',   96),
+                ('mipmap-xxhdpi',  144),
+                ('mipmap-xxxhdpi', 192),
+            ]
+
+            for folder, size in densities:
+                for icon_name in ['ic_launcher', 'ic_launcher_round']:
+                    path = f'app/src/main/res/{folder}/{icon_name}.png'
+                    os.makedirs(os.path.dirname(path), exist_ok=True)
+                    with open(path, 'wb') as f:
+                        f.write(make_png(size, size))
+
+            themes_path = 'app/src/main/res/values/themes.xml'
+            if not os.path.exists(themes_path):
+                with open(themes_path, 'w') as f:
+                    f.write(
+                        '<?xml version="1.0" encoding="utf-8"?>\n'
+                        '<resources>\n'
+                        '    <style name="Theme.CloudWorkerAI" parent="android:Theme.Material.Light.NoActionBar" />\n'
+                        '</resources>\n'
+                    )
+
+            print('Placeholder resources created successfully')
+            PYEOF
+      - run:
           name: Build Debug APK
           command: ./gradlew assembleDebug
       - store_artifacts:
@@ -25,4 +69,3 @@ workflows:
   build-workflow:
     jobs:
       - build
-      
