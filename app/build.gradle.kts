@@ -70,9 +70,9 @@ dependencies {
 
     // --- مكتبات Supabase الجديدة (بديلة Firebase) ---
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.0")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.5.0")
     implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.0")
-    implementation("io.ktor:ktor-client-android:2.3.12") // محرك الاتصال
+    implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
