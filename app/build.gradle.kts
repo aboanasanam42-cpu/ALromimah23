@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("com.google.gms.google-services")
+    // تم إزالة إضافة com.google.gms.google-services لأننا استغنينا عن Firebase
 }
 
 android {
@@ -69,21 +69,17 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    // Firebase
-    implementation(platform("com.google.firebase:firebase-bom:32.7.0"))
-    implementation("com.google.firebase:firebase-auth-ktx")
-    implementation("com.google.firebase:firebase-firestore-ktx")
-
-    // Google Sign-In
-    implementation("com.google.android.gms:play-services-auth:20.7.0")
+    // --- مكتبات Supabase المضافة حديثاً وبديلة Firebase ---
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.0") // لقواعد البيانات
+    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.0")      // لتسجيل الدخول والمصادقة
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.0")  // للتحديث اللحظي للبيانات
+    
+    // محرك الاتصال Ktor المطلوبة لعمل Supabase في بيئة الأندرويد
+    implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-
-    // Dagger Hilt (for dependency injection, if needed later)
-    // implementation("com.google.dagger:hilt-android:2.48")
-    // kapt("com.google.dagger:hilt-android-compiler:2.48")
 
     // Unit Testing
     testImplementation("junit:junit:4.13.2")
