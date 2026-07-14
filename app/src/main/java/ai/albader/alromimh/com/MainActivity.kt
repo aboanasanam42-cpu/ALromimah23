@@ -6,41 +6,23 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import ai.albader.alromimh.com.ui.theme.CloudWorkerAITheme
+import ai.albader.alromimh.com.auth.login.LoginScreen
+import ai.albader.alromimh.com.ui.theme.AlromimahTheme // تأكد من مطابقة اسم الـ Theme الفعلي لديك
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            CloudWorkerAITheme {
-                // A surface container using the 'background' color from the theme
+            AlromimahTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Greeting("Android")
+                    // تشغيل شاشة تسجيل الدخول كشاشة رئيسية عند فتح التطبيق
+                    LoginScreen() 
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    CloudWorkerAITheme {
-        Greeting("Android")
     }
 }
