@@ -2,20 +2,16 @@ package ai.albader.alromimh.com
 
 import io.github.jan.supabase.createSupabaseClient
 import io.github.jan.supabase.postgrest.Postgrest
-import io.github.jan.supabase.gotrue.Auth
-import io.ktor.client.engine.android.Android
-import io.github.jan.supabase.serializer.KotlinXSerializer
-import kotlinx.serialization.json.Json
+import io.github.jan.supabase.gotrue.GoTrue // الاستيراد الصحيح والحديث لعملية المصادقة
 
-val supabase = createSupabaseClient(
-    supabaseUrl = "https://pdlhyolxjnymkhutzkew.supabase.co",
-    supabaseKey = "sb_publishable_XbVsa5L5erbW-BXDonNTEQ_Y6wXkJ3J"
+// كائن العميل الخاص بـ Supabase للاتصال بقاعدة البيانات وإدارة الجلسات
+val supabaseClient = createSupabaseClient(
+    supabaseUrl = "https://your-project-id.supabase.co", // استبدلها برابط مشروعك الخاص بـ Supabase
+    supabaseKey = "your-anon-key" // استبدلها بمفتاح anon الخاص بمشروعك
 ) {
+    // تثبيت المكونات الأساسية للعمل
     install(Postgrest)
-    install(Auth)
-    // نستخدم Ktor مع محرك Android
-    defaultClient = io.ktor.client.HttpClient(Android)
-    serializer = KotlinXSerializer(Json {
-        ignoreUnknownKeys = true
-    })
+    install(GoTrue) {
+        // يمكنك إضافة إعدادات إضافية للمصادقة هنا إذا رغبت مستقبلاً
+    }
 }
