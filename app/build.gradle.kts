@@ -69,9 +69,9 @@ dependencies {
     implementation("androidx.compose.material3:material3")
 
     // --- مكتبات Supabase الجديدة (بديلة Firebase) ---
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.0")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.4.3")
+    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.4.3")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.4.3")
     implementation("io.ktor:ktor-client-android:2.3.12")
 
     // Coroutines
