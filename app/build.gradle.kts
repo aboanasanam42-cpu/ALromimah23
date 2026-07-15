@@ -10,7 +10,7 @@ android {
 
     defaultConfig {
         applicationId = "ai.albader.alromimh.com"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
@@ -69,10 +69,10 @@ dependencies {
     implementation("androidx.compose.material3:material3")
 
     // --- مكتبات Supabase الجديدة (بديلة Firebase) ---
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.5.0")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.5.0")
-    implementation("io.ktor:ktor-client-android:2.3.12") // محرك الاتصال
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:3.3.0")
+    implementation("io.github.jan-tennert.supabase:auth-kt:3.3.0")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:3.3.0")
+    implementation("io.ktor:ktor-client-android:3.3.0")
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
