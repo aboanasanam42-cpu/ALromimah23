@@ -65,7 +65,8 @@ dependencies {
     
     // Supabase & Ktor (الإصدارات المتوافقة المستقرة)
     implementation("io.github.jan-tennert.supabase:postgrest-kt:2.1.3")
-    implementation("io.github.jan-tennert.supabase:gotrue-kt:2.1.3")
+    implementation("io.github.jan-tennert.supabase:auth-kt:2.1.3")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:2.1.3")
     implementation("io.ktor:ktor-client-android:2.3.8")
     
     // Testing

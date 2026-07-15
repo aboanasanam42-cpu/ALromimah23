@@ -9,11 +9,11 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import ai.albader.alromimh.com.auth.login.LoginScreen
-import ai.albader.alromimh.com.ui.theme.CloudworkerAITheme
-import io.github.jan-tennert.supabase.createSupabaseClient
-import io.github.jan-tennert.supabase.auth.Auth
-import io.github.jan-tennert.supabase.postgrest.Postgrest
-import io.github.jan-tennert.supabase.realtime.Realtime
+import ai.albader.alromimh.com.ui.theme.CloudWorkerAITheme
+import io.github.jan.tennert.supabase.createSupabaseClient
+import io.github.jan.tennert.supabase.auth.Auth
+import io.github.jan.tennert.supabase.postgrest.Postgrest
+import io.github.jan.tennert.supabase.realtime.Realtime
 
 class MainActivity : ComponentActivity() {
 
@@ -38,7 +38,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         
         setContent {
-            CloudworkerAITheme {
+            CloudWorkerAITheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
