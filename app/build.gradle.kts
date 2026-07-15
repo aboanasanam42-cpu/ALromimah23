@@ -30,11 +30,11 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
     kotlinOptions {
-        jvmTarget = "1.8"
+        jvmTarget = "11"
     }
     buildFeatures {
         compose = true
@@ -64,10 +64,10 @@ dependencies {
     implementation("androidx.activity:activity-compose:1.8.2")
     
     // Supabase & Ktor (الإصدارات المتوافقة المستقرة)
-    implementation("io.github.jan-tennert.supabase:postgrest-kt:2.1.3")
-    implementation("io.github.jan-tennert.supabase:auth-kt:2.1.3")
-    implementation("io.github.jan-tennert.supabase:realtime-kt:2.1.3")
-    implementation("io.ktor:ktor-client-android:2.3.8")
+    implementation("io.github.jan-tennert.supabase:postgrest-kt:3.1.4")
+    implementation("io.github.jan-tennert.supabase:auth-kt:3.1.4")
+    implementation("io.github.jan-tennert.supabase:realtime-kt:3.1.4")
+    implementation("io.ktor:ktor-client-android:3.1.3")
     
     // Testing
     testImplementation("junit:junit:4.13.2")
