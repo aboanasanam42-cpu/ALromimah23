@@ -1,51 +1,30 @@
-package ai.albader.alromimh.com
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    package="ai.albader.alromimh.com">
 
-import android.os.Bundle
-import android.util.Log
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.ui.Modifier
-import ai.albader.alromimh.com.auth.login.LoginScreen
-import ai.albader.alromimh.com.ui.theme.CloudWorkerAITheme
-import io.github.jan.tennert.supabase.createSupabaseClient
-import io.github.jan.tennert.supabase.auth.Auth
-import io.github.jan.tennert.supabase.postgrest.Postgrest
-import io.github.jan.tennert.supabase.realtime.Realtime
+    <!-- هذا هو إذن الوصول إلى الإنترنت -->
+    <uses-permission android:name="android.permission.INTERNET" />
 
-class MainActivity : ComponentActivity() {
-
-    companion object {
-        // تم ربط موقعك بنجاح
-        const val SUPABASE_URL = "https://xvuniotkyrvdlgxlhotq.supabase.co"
-        
-        // تم ربط مفتاح الأمان الطويل الخاص بك بنجاح
-        const val SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dW5pb3RreXJ2ZGxneGxob3RxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNDQ5NDksImV4cCI6MjA5OTYyMDk0OX0.4UrHxa54lJnWBF5KuRCB7L40BW8CgaSYIB6GSfn8dp0"
-
-        val supabase = createSupabaseClient(
-            supabaseUrl = SUPABASE_URL,
-            supabaseKey = SUPABASE_ANON_KEY
-        ) {
-            install(Auth)
-            install(Postgrest)
-            install(Realtime)
-        }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        
-        setContent {
-            CloudWorkerAITheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    LoginScreen()
-                }
-            }
-        }
-    }
-}
+    <application
+        android:allowBackup="true"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:fullBackupContent="@xml/backup_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.CloudWorkerAI"
+        tools:targetApi="31">
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.CloudWorkerAI">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>
