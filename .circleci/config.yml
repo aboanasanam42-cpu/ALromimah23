@@ -10,7 +10,12 @@ jobs:
       resource-class: large
       tag: 2024.01.1
     steps:
-      - checkout
+      - run:
+          name: Checkout code
+          command: |
+            git clone --filter=blob:none \
+              https://github.com/aboanasanam42-cpu/ALromimah23.git .
+            git checkout "$CIRCLE_SHA1"
       - run:
           name: Grant execute permission for gradlew
           command: chmod +x gradlew
