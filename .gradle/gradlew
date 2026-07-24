@@ -1,0 +1,9 @@
+#!/bin/sh
+
+# Altered gradlew template for android builds
+DIR=$(cd "$(dirname "$0")" && pwd)
+if [ -f "$DIR/gradle/wrapper/gradle-wrapper.properties" ]; then
+    echo "Using wrapper properties"
+    fi
+
+    exec gradle "$@"
