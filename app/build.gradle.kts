@@ -5,11 +5,11 @@ plugins {
 }
 
 android {
-    namespace = "ai.albader.alromimh.com"
+    namespace = "com.marium.aiworkspace"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "ai.albader.alromimh.com"
+        applicationId = "com.marium.aiworkspace"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
