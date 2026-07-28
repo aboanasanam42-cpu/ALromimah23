@@ -33,7 +33,9 @@ jobs:
     - name: Build Signed Release APK
       run: ./gradlew assembleRelease
       env:
-        CM_KEYSTORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+        CM_KEYSTORE_PASSWORD: ${{ secrets.CM_KEYSTORE_PASSWORD }}
+        CM_KEY_ALIAS: ${{ secrets.CM_KEY_ALIAS }}
+        CM_KEY_PASSWORD: ${{ secrets.CM_KEY_PASSWORD }}
 
     - name: Upload APK Artifact
       uses: actions/upload-artifact@v4
