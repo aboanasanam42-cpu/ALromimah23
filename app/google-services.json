@@ -2,7 +2,7 @@
   "project_info": {
     "project_number": "574862521859",
     "project_id": "building-git-53976479-71cea",
-    "storage_bucket": "building-git-53976479-71cea.appspot.com"
+    "storage_bucket": "building-git-53976479-71cea.firebasestorage.app"
   },
   "client": [
     {
@@ -12,15 +12,10 @@
           "package_name": "com.marium.aiworkspace"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "574862521859-dummy.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
-          "current_key": "dummy-api-key-for-firebase-will-be-resolved-on-runtime"
+          "current_key": "AIzaSyBEv4LC9XIL_qEzeA_rvhYmpZhiezB8Z_c"
         }
       ],
       "services": {
