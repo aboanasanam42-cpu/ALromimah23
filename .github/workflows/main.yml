@@ -25,6 +25,8 @@ jobs:
       run: |
         if [ -n "${{ secrets.KEYSTORE_BASE64 }}" ]; then
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > app/upload-keystore.jks
+        else
+          echo "Keystore base64 secret is missing, using existing file if available"
         fi
 
     - name: Make gradlew executable
