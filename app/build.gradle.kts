@@ -33,7 +33,7 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = false
-            // signingConfig = signingConfigs.getByName("release") // Disable strict signing temporarily
+            signingConfig = signingConfigs.getByName("release")
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
