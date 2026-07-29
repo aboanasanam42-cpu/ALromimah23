@@ -16,3 +16,4 @@ Architecture Specification & Codebase Initialization for "CloudWorker AI" Applic
 ## CI/CD
 * **CircleCI:** Automated build pipeline.
 * **Codemagic:** Signed release APK generation and publishing.
+\n\n# Trigger Build\nThis commit triggers the Android CI/CD workflow.
