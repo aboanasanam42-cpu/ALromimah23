@@ -32,7 +32,7 @@ jobs:
     - name: Make gradlew executable
       run: chmod +x gradlew
 
-    - name: Build Signed Release APK
+    - name: Build Release APK
       run: ./gradlew assembleRelease
       env:
         CM_KEYSTORE_PASSWORD: ${{ secrets.CM_KEYSTORE_PASSWORD }}
