@@ -6,8 +6,10 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.marium.aiworkspace.dashboard.DashboardScreen
+import androidx.navigation.compose.rememberNavController
+import com.marium.aiworkspace.navigation.AppNavGraph
 import com.marium.aiworkspace.ui.theme.CloudWorkerAITheme
 
 class MainActivity : ComponentActivity() {
@@ -15,13 +17,19 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             CloudWorkerAITheme {
-                Surface(
-                    modifier = Modifier.fillMaxSize(),
-                    color = MaterialTheme.colorScheme.background
-                ) {
-                    DashboardScreen()
-                }
+                AppNavigationHost()
             }
         }
+    }
+}
+
+@Composable
+private fun AppNavigationHost() {
+    val navController = rememberNavController()
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background
+    ) {
+        AppNavGraph(navController = navController)
     }
 }
