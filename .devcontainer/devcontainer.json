@@ -1,0 +1,15 @@
+{
+  "name": "ALromimah23 Android Codespace",
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu",
+  "postCreateCommand": "bash -lc 'if ! grep -q \"export ANDROID_HOME=/usr/local/lib/android/sdk\" ~/.bashrc; then printf \"\\nexport ANDROID_HOME=/usr/local/lib/android/sdk\\nexport PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools\\n\" >> ~/.bashrc; fi && sudo mkdir -p /usr/local/lib/android/sdk/cmdline-tools && cd /tmp && wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O commandlinetools-linux-11076708_latest.zip && unzip -q -o commandlinetools-linux-11076708_latest.zip && sudo rm -rf /usr/local/lib/android/sdk/cmdline-tools/latest && sudo mv cmdline-tools /usr/local/lib/android/sdk/cmdline-tools/latest && sudo chown -R $(whoami):$(whoami) /usr/local/lib/android/sdk && export ANDROID_HOME=/usr/local/lib/android/sdk && export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools && yes | /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager --licenses && /usr/local/lib/android/sdk/cmdline-tools/latest/bin/sdkmanager \"platforms;android-35\" \"build-tools;34.0.0\" \"platform-tools\" && printf \"sdk.dir=/usr/local/lib/android/sdk\\n\" > /workspaces/ALromimah23/local.properties'",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.env.linux": {
+          "ANDROID_HOME": "/usr/local/lib/android/sdk",
+          "PATH": "/usr/local/lib/android/sdk/cmdline-tools/latest/bin:/usr/local/lib/android/sdk/platform-tools:${env:PATH}"
+        }
+      }
+    }
+  }
+}

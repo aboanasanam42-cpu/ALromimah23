@@ -1,0 +1,16 @@
+# Android / Gradle generated artifacts
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+*.ap_
+local.properties
+*.jks
+*.keystore
+
+# Archive artifacts
+*.zip
+
+# OS / editor metadata
+.DS_Store
