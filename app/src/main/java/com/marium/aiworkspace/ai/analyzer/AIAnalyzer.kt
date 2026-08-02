@@ -3,6 +3,7 @@ package com.marium.aiworkspace.ai.analyzer
 import android.util.Log
 import com.google.ai.client.generativeai.GenerativeModel
 import com.google.ai.client.generativeai.type.content
+import com.marium.aiworkspace.BuildConfig
 import com.marium.aiworkspace.data.model.AIAnalysisResult
 import com.marium.aiworkspace.data.model.Opportunity
 import kotlinx.coroutines.Dispatchers
@@ -19,7 +20,7 @@ class AIAnalyzer {
         private const val TAG = "AIAnalyzer"
         private const val MODEL_NAME = "gemini-1.5-flash"
         // Replace with your actual API key or load from BuildConfig
-        private const val API_KEY = "YOUR_GEMINI_API_KEY"
+        private val API_KEY = BuildConfig.GEMINI_API_KEY
     }
 
     private val generativeModel by lazy {

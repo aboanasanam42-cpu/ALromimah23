@@ -209,13 +209,13 @@ fun OpportunityQuickCard(opportunity: Opportunity) {
                     style = MaterialTheme.typography.bodyLarge
                 )
                 Text(
-                    text = opportunity.platform,
+                    text = opportunity.source,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Text(
-                text = "${opportunity.payRange}",
+                text = opportunity.salary,
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.primary
             )

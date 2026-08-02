@@ -126,13 +126,13 @@ class OpportunityDataSource(
      */
     suspend fun analyzeOpportunity(opportunity: Opportunity): Result<Opportunity> = withContext(Dispatchers.IO) {
         try {
-            val analysis = aiAnalyzer.analyzeOpportunity(opportunity)
+            val analysisResult = aiAnalyzer.analyzeOpportunity(opportunity).getOrThrow()
             val aiScore = aiAnalyzer.calculateAIScore(opportunity)
 
             val updatedOpportunity = opportunity.copy(
                 aiScore = aiScore,
-                isScam = analysis.scamProbability > 0.6,
-                status = if (analysis.recommendedAction == "avoid") "suspicious" else opportunity.status
+                isScam = analysisResult.scamProbability > 0.6,
+                status = if (analysisResult.recommendedAction == "avoid") "suspicious" else opportunity.status
             )
 
             opportunityDao.insertOpportunity(updatedOpportunity)

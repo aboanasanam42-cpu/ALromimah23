@@ -25,7 +25,7 @@ class SyncWorker(
             val remoteOpportunities = api.getOpportunities()
 
             // Insert into local database
-            db.opportunityDao().insertAll(remoteOpportunities)
+            db.opportunityDao().insertOpportunities(remoteOpportunities)
 
             Result.success()
         } catch (e: Exception) {
