@@ -1,117 +1,140 @@
 package com.marium.aiworkspace.dashboard
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
-import androidx.navigation.NavController
-import com.marium.aiworkspace.navigation.AppDestinations
+import com.marium.aiworkspace.data.model.Opportunity
 
-data class DashboardItem(
-    val title: String,
-    val icon: ImageVector,
-    val description: String
-)
-
+/**
+ * Dashboard Screen with stats and quick actions.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DashboardScreen(navController: NavController) {
-    val items = listOf(
-        DashboardItem("AI Analysis", Icons.Default.Analytics, "Deep text insights"),
-        DashboardItem("Cloud Sync", Icons.Default.CloudUpload, "Secure backup"),
-        DashboardItem("Trends", Icons.Default.TrendingUp, "Market tracking"),
-        DashboardItem("Security", Icons.Default.Security, "Data protection"),
-        DashboardItem("Payments", Icons.Default.Payments, "Subscriptions"),
-        DashboardItem("Settings", Icons.Default.Settings, "App config")
-    )
-
-    var showDialog by remember { mutableStateOf(false) }
-    var dialogTitle by remember { mutableStateOf("") }
-    var dialogMessage by remember { mutableStateOf("") }
-
-    if (showDialog) {
-        AlertDialog(
-            onDismissRequest = { showDialog = false },
-            title = { Text(dialogTitle) },
-            text = { Text(dialogMessage) },
-            confirmButton = {
-                TextButton(onClick = { showDialog = false }) {
-                    Text("OK")
-                }
-            }
-        )
-    }
-
+fun DashboardScreen(
+    stats: DashboardStats = DashboardStats(),
+    recentOpportunities: List<Opportunity> = emptyList(),
+    onBack: () -> Unit,
+    onViewOpportunities: () -> Unit = {},
+    onViewWallet: () -> Unit = {},
+    onViewProfile: () -> Unit = {}
+) {
     Scaffold(
         topBar = {
-            CenterAlignedTopAppBar(
-                title = { Text("CloudWorker AI", fontWeight = FontWeight.ExtraBold) },
-                colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    titleContentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                )
+            TopAppBar(
+                title = { Text("لوحة التحكم") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                }
             )
         }
     ) { padding ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp)
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text(
-                text = "Welcome Back",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Text(
-                text = "Workspace is active and secure.",
-                fontSize = 14.sp,
-                color = MaterialTheme.colorScheme.secondary,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
+            // Quick Stats Row
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Work,
+                        value = "${stats.totalOpportunities}",
+                        label = "الفرص",
+                        containerColor = MaterialTheme.colorScheme.primaryContainer
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.CheckCircle,
+                        value = "${stats.completedTasks}",
+                        label = "المنجز",
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer
+                    )
+                }
+            }
 
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(items) { item ->
-                    DashboardCard(item) {
-                        when (item.title) {
-                            "Settings" -> navController.navigate(AppDestinations.SETTINGS)
-                            "AI Analysis" -> navController.navigate(AppDestinations.AI_ANALYSIS)
-                            "Payments" -> navController.navigate(AppDestinations.PAYMENT)
-                            else -> {
-                                dialogTitle = item.title
-                                dialogMessage = when (item.title) {
-                                    "Cloud Sync" -> "Cloud sync is ready for secure backup and restore workflows."
-                                    "Trends" -> "Trend insights are available in the next release for live analytics."
-                                    "Security" -> "Security center is now mapped to a dedicated interaction dialog."
-                                    else -> "This card now opens a contextual interactive dialog."
-                                }
-                                showDialog = true
-                            }
-                        }
-                    }
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.AttachMoney,
+                        value = "$${String.format("%.0f", stats.totalEarnings)}",
+                        label = "الأرباح",
+                        containerColor = MaterialTheme.colorScheme.tertiaryContainer
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Bookmark,
+                        value = "${stats.savedOpportunities}",
+                        label = "المحفوظات",
+                        containerColor = MaterialTheme.colorScheme.errorContainer
+                    )
+                }
+            }
+
+            // Quick Actions
+            item {
+                Text(
+                    text = "إجراءات سريعة",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+
+            item {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    QuickActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Search,
+                        label = "استكشف الفرص",
+                        onClick = onViewOpportunities
+                    )
+                    QuickActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.AccountBalanceWallet,
+                        label = "المحفظة",
+                        onClick = onViewWallet
+                    )
+                    QuickActionButton(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Person,
+                        label = "الملف الشخصي",
+                        onClick = onViewProfile
+                    )
+                }
+            }
+
+            // Recent Opportunities
+            if (recentOpportunities.isNotEmpty()) {
+                item {
+                    Text(
+                        text = "فرص حديثة",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
+
+                items(recentOpportunities.take(5)) { opportunity ->
+                    OpportunityQuickCard(opportunity)
                 }
             }
         }
@@ -119,41 +142,90 @@ fun DashboardScreen(navController: NavController) {
 }
 
 @Composable
-fun DashboardCard(item: DashboardItem, onClick: () -> Unit) {
-    ElevatedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
-            .clickable { onClick() },
-        shape = MaterialTheme.shapes.large
+fun StatCard(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    value: String,
+    label: String,
+    containerColor: androidx.compose.ui.graphics.Color
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(containerColor = containerColor)
     ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Icon(
-                imageVector = item.icon,
-                contentDescription = item.title,
-                modifier = Modifier.size(40.dp),
-                tint = MaterialTheme.colorScheme.primary
-            )
+            Icon(icon, contentDescription = null)
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = item.title,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp,
-                textAlign = TextAlign.Center
+                text = value,
+                style = MaterialTheme.typography.headlineSmall
             )
             Text(
-                text = item.description,
-                fontSize = 11.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                lineHeight = 14.sp
+                text = label,
+                style = MaterialTheme.typography.bodySmall
             )
         }
     }
 }
+
+@Composable
+fun QuickActionButton(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    OutlinedButton(
+        onClick = onClick,
+        modifier = modifier,
+        contentPadding = PaddingValues(12.dp)
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(icon, contentDescription = null)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(text = label, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+@Composable
+fun OpportunityQuickCard(opportunity: Opportunity) {
+    Card(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = opportunity.title,
+                    style = MaterialTheme.typography.bodyLarge
+                )
+                Text(
+                    text = opportunity.platform,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            Text(
+                text = "${opportunity.payRange}",
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.primary
+            )
+        }
+    }
+}
+
+data class DashboardStats(
+    val totalOpportunities: Int = 0,
+    val completedTasks: Int = 0,
+    val totalEarnings: Double = 0.0,
+    val savedOpportunities: Int = 0
+)
