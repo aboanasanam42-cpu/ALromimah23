@@ -35,7 +35,7 @@ import com.marium.aiworkspace.payments.presentation.WalletScreen
 import com.marium.aiworkspace.profile.presentation.ProfileScreen
 import com.marium.aiworkspace.settings.SettingsScreen
 import com.marium.aiworkspace.sync.SyncWorker
-import com.marium.aiworkspace.ui.theme.CloudWorkerTheme
+import com.marium.aiworkspace.ui.theme.CloudWorkerAITheme
 import kotlinx.serialization.json.Json
 
 /**
@@ -67,7 +67,7 @@ class MainActivity : ComponentActivity() {
         SyncWorker.schedule(this)
 
         setContent {
-            CloudWorkerTheme {
+            CloudWorkerAITheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

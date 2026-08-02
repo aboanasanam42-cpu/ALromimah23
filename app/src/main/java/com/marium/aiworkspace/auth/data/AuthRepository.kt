@@ -12,6 +12,7 @@ import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseUser
 import com.google.firebase.auth.GoogleAuthProvider
+import com.google.firebase.FirebaseException
 import com.google.firebase.auth.PhoneAuthCredential
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
@@ -22,6 +23,7 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.tasks.await
 import java.util.concurrent.TimeUnit
 
@@ -149,10 +151,10 @@ class AuthRepository(private val context: Context) {
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                 // Auto-verification on some devices
-                signInWithPhoneCredential(credential)
+                runBlocking { signInWithPhoneCredential(credential) }
             }
 
-            override fun onVerificationFailed(e: Exception) {
+            override fun onVerificationFailed(e: FirebaseException) {
                 Log.e(TAG, "Phone verification failed", e)
                 onError(e)
             }
