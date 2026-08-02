@@ -1,0 +1,8 @@
+{
+  "name": "CloudWorker AI",
+  "description": "AI-powered workspace for remote opportunities, cloud sync, trend tracking, 100-point opportunity scoring, localization, security, and subscription payments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
