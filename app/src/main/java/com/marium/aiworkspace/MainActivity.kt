@@ -25,7 +25,7 @@ import com.marium.aiworkspace.auth.presentation.LoginScreen
 import com.marium.aiworkspace.core.network.NetworkClient
 import com.marium.aiworkspace.core.security.BiometricWrapper
 import com.marium.aiworkspace.dashboard.DashboardScreen
-import com.marium.aiworkspace.data.AppDatabase
+import com.marium.aiworkspace.data.local.AppDatabase
 import com.marium.aiworkspace.data.model.Opportunity
 import com.marium.aiworkspace.opportunities.data.OpportunityDataSource
 import com.marium.aiworkspace.opportunities.presentation.OpportunitiesViewModel

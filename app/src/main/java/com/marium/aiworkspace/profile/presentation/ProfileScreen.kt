@@ -165,6 +165,23 @@ fun ProfileScreen(
 }
 
 @Composable
+fun FlowRow(
+    modifier: Modifier = Modifier,
+    horizontalArrangement: Arrangement.Horizontal = Arrangement.Start,
+    verticalArrangement: Arrangement.Vertical = Arrangement.Top,
+    content: @Composable () -> Unit
+) {
+    Column(
+        modifier = modifier,
+        verticalArrangement = verticalArrangement
+    ) {
+        Row(horizontalArrangement = horizontalArrangement) {
+            content()
+        }
+    }
+}
+
+@Composable
 fun StatItem(value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Text(

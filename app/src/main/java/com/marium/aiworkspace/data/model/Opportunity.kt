@@ -3,8 +3,10 @@ package com.marium.aiworkspace.data.model
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.google.firebase.firestore.DocumentId
+import kotlinx.serialization.Serializable
 
 @Entity(tableName = "opportunities")
+@Serializable
 data class Opportunity(
     @PrimaryKey
     @DocumentId

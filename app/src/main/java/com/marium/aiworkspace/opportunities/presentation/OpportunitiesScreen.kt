@@ -146,7 +146,7 @@ fun OpportunityCard(
                         overflow = TextOverflow.Ellipsis
                     )
                     Text(
-                        text = opportunity.companyName,
+                        text = opportunity.company,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -182,7 +182,7 @@ fun OpportunityCard(
                     shape = MaterialTheme.shapes.small
                 ) {
                     Text(
-                        text = "$${opportunity.payRate}/${opportunity.payUnit}",
+                        text = opportunity.salary,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onPrimaryContainer

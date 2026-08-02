@@ -95,7 +95,7 @@ fun OpportunityDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = opportunity.companyName,
+                        text = opportunity.company,
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f)
                     )
@@ -109,12 +109,12 @@ fun OpportunityDetailScreen(
             ) {
                 StatCard(
                     title = "الأجر",
-                    value = "$${opportunity.payRate}/${opportunity.payUnit}",
+                    value = opportunity.salary,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
                     title = "نوع العمل",
-                    value = opportunity.workload,
+                    value = opportunity.type,
                     modifier = Modifier.weight(1f)
                 )
                 StatCard(
@@ -167,7 +167,7 @@ fun OpportunityDetailScreen(
             }
 
             // Skills
-            if (opportunity.requiredSkills.isNotEmpty()) {
+            if (opportunity.skills.isNotEmpty()) {
                 Card(modifier = Modifier.fillMaxWidth()) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
@@ -179,32 +179,11 @@ fun OpportunityDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            opportunity.requiredSkills.forEach { skill ->
+                            opportunity.skills.forEach { skill ->
                                 AssistChip(
                                     onClick = { },
                                     label = { Text(skill) }
                                 )
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Tags
-            if (opportunity.tags.isNotEmpty()) {
-                Card(modifier = Modifier.fillMaxWidth()) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            text = "الوسوم",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        FlowRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            opportunity.tags.forEach { tag ->
-                                SuggestionChip(onClick = { }, label = { Text(tag) })
                             }
                         }
                     }

@@ -2,6 +2,7 @@ package com.marium.aiworkspace.payments.data
 
 import android.content.Context
 import android.util.Log
+import android.content.SharedPreferences
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKey
 import com.google.firebase.firestore.FirebaseFirestore
@@ -38,7 +39,7 @@ class PaymentDataSource(
         .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
         .build()
 
-    private val securePrefs: EncryptedSharedPreferences = try {
+    private val securePrefs: SharedPreferences = try {
         EncryptedSharedPreferences.create(
             context,
             PREFS_NAME,

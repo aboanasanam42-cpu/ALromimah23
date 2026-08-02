@@ -47,7 +47,7 @@ class NotificationWorker(
                 val latest = opportunities.first()
                 sendNotification(
                     title = "فرصة جديدة: ${latest.title}",
-                    message = "${latest.companyName} - $${latest.payRate}/${latest.payUnit}"
+                    message = "${latest.company} - ${latest.salary}"
                 )
             }
 

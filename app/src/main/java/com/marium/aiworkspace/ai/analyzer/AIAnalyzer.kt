@@ -59,8 +59,8 @@ class AIAnalyzer {
             val prompt = """
                 Rate the legitimacy of this job opportunity on a scale of 0-100.
                 Title: ${opportunity.title}
-                Company: ${opportunity.companyName}
-                Pay: $${opportunity.payRate}/${opportunity.payUnit}
+                Company: ${opportunity.company}
+                Pay: ${opportunity.salary}
                 Description: ${opportunity.description.take(500)}
                 
                 Return ONLY a number between 0 and 100.
@@ -88,11 +88,10 @@ class AIAnalyzer {
             
             Opportunity Details:
             Title: ${opportunity.title}
-            Company: ${opportunity.companyName}
+            Company: ${opportunity.company}
             Description: ${opportunity.description}
-            Pay Rate: $${opportunity.payRate} per ${opportunity.payUnit}
-            Skills Required: ${opportunity.requiredSkills.joinToString()}
-            Tags: ${opportunity.tags.joinToString()}
+            Pay: ${opportunity.salary}
+            Skills Required: ${opportunity.skills.joinToString()}
             
             Return ONLY valid JSON, no markdown formatting.
         """.trimIndent()
@@ -118,6 +117,19 @@ class AIAnalyzer {
             scamProbability = json.optDouble("scamProbability", 0.0),
             analyzedAt = java.util.Date()
         )
+    }
+
+    /**
+     * Calculate AI score (0-100) for an opportunity.
+     */
+    fun calculateAIScore(opportunity: Opportunity): Double {
+        var score = 50.0
+        if (opportunity.salary.isNotBlank()) score += 10
+        if (opportunity.skills.isNotEmpty()) score += 10
+        if (opportunity.description.length > 100) score += 10
+        if (opportunity.company.isNotBlank()) score += 10
+        if (opportunity.reliabilityScore > 0.5) score += 10
+        return score.coerceIn(0.0, 100.0)
     }
 
     private fun parseStringArray(json: JSONObject, key: String): List<String> {
