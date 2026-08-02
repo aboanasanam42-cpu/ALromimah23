@@ -10,6 +10,10 @@ on:
 permissions:
   contents: write
 
+env:
+  ANDROID_HOME: ${{ github.workspace }}/android-sdk
+  ANDROID_SDK_ROOT: ${{ github.workspace }}/android-sdk
+
 jobs:
   build-web:
     runs-on: ubuntu-latest
@@ -61,11 +65,41 @@ jobs:
         distribution: 'temurin'
         cache: gradle
 
-    - name: Setup Android SDK
-      uses: android-actions/setup-android@v3
+    # =============================================
+    # Android SDK — Manual Installation (Explicit)
+    # =============================================
+    - name: Install Android SDK (manual)
+      run: |
+        echo "=== Creating Android SDK directory ==="
+        mkdir -p $ANDROID_HOME/cmdline-tools
 
-    - name: Accept Android Licenses
-      run: yes | sdkmanager --licenses || true
+        echo "=== Downloading Android Command Line Tools ==="
+        curl -L -o /tmp/cmdline-tools.zip \
+          https://dl.google.com/android/repository/commandlinetools-linux-10406996_latest.zip
+
+        echo "=== Extracting Command Line Tools ==="
+        unzip -q /tmp/cmdline-tools.zip -d $ANDROID_HOME/cmdline-tools/
+        mv $ANDROID_HOME/cmdline-tools/cmdline-tools $ANDROID_HOME/cmdline-tools/latest
+
+        echo "=== Adding SDK to PATH ==="
+        echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/platform-tools" >> $GITHUB_PATH
+        echo "$ANDROID_HOME/build-tools/33.0.2" >> $GITHUB_PATH
+        export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/build-tools/33.0.2
+
+        echo "=== Accepting Android Licenses ==="
+        yes | sdkmanager --licenses || true
+
+        echo "=== Installing SDK Packages ==="
+        sdkmanager "cmdline-tools;latest"
+        sdkmanager "platform-tools"
+        sdkmanager "platforms;android-33"
+        sdkmanager "build-tools;33.0.2"
+
+        echo "=== Verifying Installation ==="
+        sdkmanager --list_installed
+        adb --version || true
+    # =============================================
 
     - name: Sync Capacitor Android
       run: npx cap sync android
