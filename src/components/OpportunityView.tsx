@@ -139,16 +139,14 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <h2 className="text-xl sm:text-2xl font-extrabold">
-              {language === 'ar' ? 'CloudWorker AI - شاشة الفرص' : 'CloudWorker AI - Opportunities Screen'}
+              {t(language, 'opportunitiesHeader')}
             </h2>
             <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[11px] font-bold rounded-full">
               Kotlin Engine Port
             </span>
           </div>
           <p className="text-slate-300 text-xs sm:text-sm max-w-xl">
-            {language === 'ar'
-              ? 'نظام كشف الاحتيال الذكي وتقييم درجة الفرصة والربح وفق قواعد Firestore الخوارزمية'
-              : 'Smart AI Fraud Detection & Scoring Engine synced with real-time database state'}
+            {t(language, 'opportunitiesSub')}
           </p>
         </div>
 
@@ -165,7 +163,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
             className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-2"
           >
             <Plus className="w-4 h-4" />
-            <span>{language === 'ar' ? 'إضافة فرصة جديدة' : 'Add Opportunity'}</span>
+            <span>{language === 'ar' ? 'إضافة فرصة عمل جديدة' : 'Add New Job'}</span>
           </button>
         </div>
       </div>
@@ -386,25 +384,25 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                   <div className="flex items-start justify-between gap-2">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-xs font-semibold px-2 py-0.5 bg-slate-100 text-slate-700 rounded-md">
-                          {opp.category}
+                        <span className="text-xs font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded-md border border-emerald-100">
+                          {t(language, 'jobCategory')}: {opp.category}
                         </span>
                         {opp.status === 'suspicious' && (
                           <span className="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-bold rounded-md flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3 text-rose-600" />
-                            {language === 'ar' ? 'مشبوهة' : 'Suspicious'}
+                            {language === 'ar' ? 'تنبيه: عمل مشبوه' : 'Suspicious'}
                           </span>
                         )}
                         {opp.status === 'accepted' && (
                           <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 text-[10px] font-bold rounded-md flex items-center gap-1">
                             <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                            {language === 'ar' ? 'تم القبول' : 'Accepted'}
+                            {language === 'ar' ? 'تم القبول والبدء' : 'Accepted'}
                           </span>
                         )}
                         {opp.status === 'saved' && (
                           <span className="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] font-bold rounded-md flex items-center gap-1">
                             <Bookmark className="w-3 h-3 text-amber-600" />
-                            {language === 'ar' ? 'محفوظة' : 'Saved'}
+                            {language === 'ar' ? 'عمل محفوظ' : 'Saved'}
                           </span>
                         )}
                       </div>
@@ -412,7 +410,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                         {opp.title}
                       </h4>
                       <p className="text-xs text-slate-500 font-medium">
-                        {language === 'ar' ? 'المصدر' : 'Source'}: <span className="text-slate-700 font-bold">{opp.source || opp.company}</span>
+                        {t(language, 'workSource')}: <span className="text-slate-700 font-bold">{opp.source || opp.company}</span>
                       </p>
                     </div>
 
@@ -423,9 +421,12 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                     </div>
                   </div>
 
-                  <div className="text-xs text-emerald-700 font-extrabold flex items-center gap-1">
-                    <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                    <span>{language === 'ar' ? 'الربح' : 'Reward'}: ${(opp.reward ?? opp.rawPayoutUSD).toLocaleString()}</span>
+                  <div className="bg-emerald-50/80 p-2.5 rounded-xl border border-emerald-100 flex items-center justify-between text-xs font-extrabold text-emerald-900">
+                    <div className="flex items-center gap-1.5">
+                      <DollarSign className="w-4 h-4 text-emerald-600" />
+                      <span>{t(language, 'payoutAmount')}:</span>
+                    </div>
+                    <span className="text-emerald-700 text-sm font-extrabold">${(opp.reward ?? opp.rawPayoutUSD).toLocaleString()} USD</span>
                   </div>
 
                   <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
@@ -444,7 +445,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                     }`}
                   >
                     <Check className="w-3.5 h-3.5" />
-                    <span>{language === 'ar' ? 'عرض / قبول' : 'Accept'}</span>
+                    <span>{t(language, 'acceptAndStart')}</span>
                   </button>
 
                   <button
@@ -456,7 +457,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                     }`}
                   >
                     <Bookmark className="w-3.5 h-3.5" />
-                    <span>{language === 'ar' ? 'حفظ' : 'Save'}</span>
+                    <span>{t(language, 'saveJob')}</span>
                   </button>
 
                   <button
@@ -468,7 +469,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                     }`}
                   >
                     <EyeOff className="w-3.5 h-3.5" />
-                    <span>{language === 'ar' ? 'تجاهل' : 'Ignore'}</span>
+                    <span>{t(language, 'ignoreJob')}</span>
                   </button>
                 </div>
               </div>
@@ -561,69 +562,115 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
       {/* Modal: Opportunity Detail Modal */}
       {selectedOpp && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-5 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto">
             <div className="flex items-start justify-between pb-3 border-b border-slate-100">
               <div>
-                <span className="text-xs font-semibold text-emerald-700 px-2 py-0.5 bg-emerald-50 rounded">
-                  {selectedOpp.category}
+                <span className="text-xs font-bold text-emerald-800 px-2.5 py-1 bg-emerald-100 rounded-lg">
+                  {t(language, 'jobCategory')}: {selectedOpp.category}
                 </span>
-                <h3 className="text-lg font-bold text-slate-900 mt-1">
+                <h3 className="text-lg font-extrabold text-slate-900 mt-2">
                   {selectedOpp.title}
                 </h3>
-                <p className="text-xs text-slate-500">{language === 'ar' ? 'المصدر' : 'Source'}: {selectedOpp.source || selectedOpp.company}</p>
+                <p className="text-xs text-slate-500 font-bold mt-1">
+                  {t(language, 'workSource')}: <span className="text-slate-800 font-extrabold">{selectedOpp.source || selectedOpp.company}</span>
+                </p>
               </div>
               <button onClick={() => setSelectedOpp(null)} className="p-1 text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3 rounded-xl text-center">
+            {/* Key Job Metrics Grid */}
+            <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl text-center border border-slate-200">
               <div>
-                <div className="text-[10px] font-bold text-slate-400">SCORE</div>
-                <div className="text-base font-extrabold text-slate-900">{selectedOpp.score ?? selectedOpp.totalScore}%</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'safetyCheck')}</div>
+                <div className="text-base font-extrabold text-emerald-700">{selectedOpp.score ?? selectedOpp.totalScore}%</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-slate-400">RISK SCORE</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'scamLikelihood')}</div>
                 <div className="text-xs font-extrabold text-rose-600">{selectedOpp.riskScore ?? 0}%</div>
               </div>
               <div>
-                <div className="text-[10px] font-bold text-slate-400">REWARD</div>
-                <div className="text-xs font-extrabold text-emerald-700">${selectedOpp.reward ?? selectedOpp.rawPayoutUSD}</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'payoutAmount')}</div>
+                <div className="text-sm font-extrabold text-emerald-800">${(selectedOpp.reward ?? selectedOpp.rawPayoutUSD).toLocaleString()} USD</div>
               </div>
             </div>
 
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold text-slate-900 uppercase">الوصف</h4>
-              <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3 rounded-xl border border-slate-200">
+            {/* Section 1: Work Description */}
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                {t(language, 'jobCategory')} والتفاصيل
+              </h4>
+              <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                 {selectedOpp.description}
               </p>
             </div>
 
-            <div className="pt-2 flex justify-between items-center">
+            {/* Section 2: How to Get & Apply for the Job */}
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-sky-600"></span>
+                {t(language, 'howToGetJob')}
+              </h4>
+              <div className="bg-sky-50/70 p-3.5 rounded-xl border border-sky-100 text-xs text-slate-800 space-y-1.5">
+                <div className="flex items-start gap-2">
+                  <span className="font-extrabold text-sky-700">1.</span>
+                  <span>اضغط على زر <strong className="text-emerald-800 font-extrabold">"{t(language, 'acceptAndStart')}"</strong> في الأسفل لبدء العمل رسمياً.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-extrabold text-sky-700">2.</span>
+                  <span>يتم إرسال الشروط والمخرجات المطلوبة فوراً إلى حسابك المباشر.</span>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="font-extrabold text-sky-700">3.</span>
+                  <span>قم بإنجاز المهام وتسليمها عبر التطبيق قبل انتهاء الوقت المحدد.</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Section 3: How to Withdraw Earnings */}
+            <div className="space-y-1.5">
+              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full bg-violet-600"></span>
+                {t(language, 'howToWithdraw')}
+              </h4>
+              <div className="bg-violet-50/70 p-3.5 rounded-xl border border-violet-100 text-xs text-slate-800 space-y-1.5">
+                <p className="font-medium">
+                  بعد تسليم العمل والتحقق منه تلقائياً، يودع المبلغ المباشر <strong className="text-violet-900 font-extrabold">${(selectedOpp.reward ?? selectedOpp.rawPayoutUSD).toLocaleString()} USD</strong> في محفظتك.
+                </p>
+                <div className="text-[11px] text-slate-600 pt-1 font-semibold">
+                  يمكنك سحب الأموال عبر: <strong>الحساب البنكي المباشر، PayPal، أو محفظة USDT الكريبتو</strong> من خلال قسم <strong className="text-violet-800">"استلام المبالغ والمحفظة"</strong>.
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="pt-2 flex justify-between items-center gap-2">
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
                     if (onUpdateOpportunityStatus) onUpdateOpportunityStatus(selectedOpp.id, 'accepted');
                     setSelectedOpp(null);
                   }}
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl"
+                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all"
                 >
-                  {language === 'ar' ? 'قبول الفرصة' : 'Accept Opportunity'}
+                  {t(language, 'acceptAndStart')}
                 </button>
                 <button
                   onClick={() => {
                     if (onUpdateOpportunityStatus) onUpdateOpportunityStatus(selectedOpp.id, 'saved');
                     setSelectedOpp(null);
                   }}
-                  className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl"
+                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl"
                 >
-                  {language === 'ar' ? 'حفظ' : 'Save'}
+                  {t(language, 'saveJob')}
                 </button>
               </div>
 
               <button
                 onClick={() => setSelectedOpp(null)}
-                className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl"
+                className="px-4 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl"
               >
                 {language === 'ar' ? 'إغلاق' : 'Close'}
               </button>

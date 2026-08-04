@@ -106,6 +106,28 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
         </div>
       </div>
 
+      {/* How to Receive & Withdraw Funds Explanation Box */}
+      <div className="bg-emerald-50 rounded-2xl p-5 border border-emerald-200 text-slate-800 space-y-3">
+        <h3 className="text-sm font-extrabold text-emerald-900 flex items-center gap-2">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+          <span>{language === 'ar' ? 'كيفية الحصول على المبلغ واستلام أرباحك فوراً:' : 'How to Receive & Withdraw Your Earnings:'}</span>
+        </h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="bg-white p-3 rounded-xl border border-emerald-100 space-y-1">
+            <span className="font-extrabold text-emerald-700 block">1. إضافة الحساب البنكي / المحفظة</span>
+            <span className="text-slate-600">اضغط على زر "+ إضافة حساب" لإضافة حسابك البنكي، PayPal، أو محفظة USDT الكريبتو.</span>
+          </div>
+          <div className="bg-white p-3 rounded-xl border border-emerald-100 space-y-1">
+            <span className="font-extrabold text-emerald-700 block">2. إنجاز الأعمال المستلمة</span>
+            <span className="text-slate-600">عند قبول وإنجاز أي عمل، يتم تحويل القيمة المالية مباشرة إلى رصيدك المتاح.</span>
+          </div>
+          <div className="bg-white p-3 rounded-xl border border-emerald-100 space-y-1">
+            <span className="font-extrabold text-emerald-700 block">3. سحب الأموال الفوري</span>
+            <span className="text-slate-600">اختر الحساب المطلوب واطلب تحويل المبلغ ليتم معالجته فوراً بأمان عالي.</span>
+          </div>
+        </div>
+      </div>
+
       {/* Connected Payout Accounts & Wallets */}
       <div className="space-y-3">
         <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
