@@ -2,182 +2,78 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { aggregateRemoteJobs } from "./src/server/jobAggregator";
 
 async function startServer() {
   const app = express();
-  const PORT = 3000;
-
+  const PORT = Number(process.env.PORT || 3000);
   app.use(express.json());
 
-  // API Routes
-  app.get("/api/health", (req, res) => {
-    res.json({
-      status: "ok",
-      appName: "CloudWorker AI",
-      timestamp: new Date().toISOString(),
-      serverPort: PORT,
-    });
+  app.get("/api/health", (_req, res) => res.json({ status: "ok", appName: "Marium AI Workspace", timestamp: new Date().toISOString(), serverPort: PORT }));
+
+  // Live remote-work aggregation. Sources are queried server-side to avoid mobile/browser CORS limits.
+  app.get("/api/jobs", async (req, res) => {
+    try {
+      const search = typeof req.query.search === "string" ? req.query.search.trim() : "";
+      const result = await aggregateRemoteJobs(search);
+      res.json({ success: true, ...result, fetchedAt: new Date().toISOString() });
+    } catch (error: any) {
+      res.status(502).json({ success: false, jobs: [], sources: [], warnings: [error?.message || "تعذر جلب الوظائف"] });
+    }
   });
 
-  // AI Analyzer Endpoint using Gemini SDK
   app.post("/api/analyze", async (req, res) => {
     const { text, analysisType } = req.body || {};
-
-    if (!text || typeof text !== "string") {
-      return res.status(400).json({ error: "Text parameter is required." });
-    }
-
+    if (!text || typeof text !== "string") return res.status(400).json({ error: "Text parameter is required." });
     const apiKey = process.env.GEMINI_API_KEY;
-
-    // If Gemini API Key is available, call Gemini 3.6 Flash
     if (apiKey) {
       try {
-        const ai = new GoogleGenAI({
-          apiKey,
-          httpOptions: {
-            headers: {
-              "User-Agent": "aistudio-build",
-            },
-          },
-        });
-
-        const prompt = `You are the CloudWorker AI Analyzer Engine. Analyze the following text/job offer/contract:
-"""
-${text}
-"""
-
-Analysis requested: ${analysisType || 'comprehensive'}.
-
-Return ONLY a valid JSON object matching this structure (no markdown fences around JSON if possible, or clean JSON):
-{
-  "summary": "Concise summary of the opportunity or text",
-  "score": 85 (a number between 0 and 100 assessing overall quality & reliability),
-  "riskAssessment": "Verified | Low Risk | Medium Risk | High Risk - with 1 sentence rationale",
-  "keyDeliverables": ["Deliverable 1", "Deliverable 2", "Deliverable 3"],
-  "suggestedSkills": ["Skill 1", "Skill 2", "Skill 3"],
-  "recommendation": "Final actionable advice for the remote worker"
-}`;
-
-        const response = await ai.models.generateContent({
-          model: "gemini-3.6-flash",
-          contents: prompt,
-          config: {
-            responseMimeType: "application/json",
-          },
-        });
-
-        const rawText = response.text || "{}";
-        const parsed = JSON.parse(rawText);
-
-        return res.json({
-          success: true,
-          result: {
-            summary: parsed.summary || "Analysis completed successfully.",
-            score: typeof parsed.score === "number" ? parsed.score : 80,
-            riskAssessment: parsed.riskAssessment || "Low Risk - Verified structure",
-            keyDeliverables: Array.isArray(parsed.keyDeliverables) ? parsed.keyDeliverables : ["Review requirements", "Set up project milestones"],
-            suggestedSkills: Array.isArray(parsed.suggestedSkills) ? parsed.suggestedSkills : ["Technical Writing", "Problem Solving"],
-            recommendation: parsed.recommendation || "Proceed with standard milestone contracts.",
-          },
-        });
-      } catch (error: any) {
-        console.warn("Gemini API call failed, falling back to local heuristic analysis:", error?.message);
-      }
+        const ai = new GoogleGenAI({ apiKey, httpOptions: { headers: { "User-Agent": "Marium-AI-Workspace" } } });
+        const prompt = `حلل فرصة العمل التالية بالعربية. نوع التحليل: ${analysisType || 'comprehensive'}.\n${text}\nأعد JSON فقط: {"summary":"","score":0,"riskAssessment":"","keyDeliverables":[],"suggestedSkills":[],"recommendation":""}`;
+        const response = await ai.models.generateContent({ model: "gemini-3.6-flash", contents: prompt, config: { responseMimeType: "application/json" } });
+        const parsed = JSON.parse(response.text || "{}");
+        return res.json({ success: true, result: {
+          summary: parsed.summary || "تم التحليل",
+          score: Number(parsed.score) || 70,
+          riskAssessment: parsed.riskAssessment || "Medium Risk",
+          keyDeliverables: Array.isArray(parsed.keyDeliverables) ? parsed.keyDeliverables : [],
+          suggestedSkills: Array.isArray(parsed.suggestedSkills) ? parsed.suggestedSkills : [],
+          recommendation: parsed.recommendation || "تحقق من شروط الدفع قبل البدء."
+        }});
+      } catch (error) { console.warn("Gemini analysis failed", error); }
     }
-
-    // Heuristic Fallback Analysis Engine
     const lower = text.toLowerCase();
-    const isCryptoScam = lower.includes("deposit") || lower.includes("usdt") || lower.includes("telegram") || lower.includes("guaranteed return") || lower.includes("25%");
-    const isTechGig = lower.includes("react") || lower.includes("kotlin") || lower.includes("node") || lower.includes("python") || lower.includes("cloud");
-
-    let score = 80;
-    let risk = "Low Risk - Standard Remote Gig";
-    const deliverables: string[] = [];
-    const skills: string[] = [];
-
-    if (isCryptoScam) {
-      score = 25;
-      risk = "High Risk - Unverified upfront deposit demand pattern detected";
-      deliverables.push("Do NOT send upfront funds", "Request verified escrow payment", "Verify company credentials");
-      skills.push("Scam Awareness", "Escrow Verification");
-    } else if (isTechGig) {
-      score = 92;
-      risk = "Verified - High quality tech workspace contract";
-      deliverables.push("Deliver modular code architecture", "Write comprehensive unit tests", "Deploy to cloud container");
-      skills.push("React / TypeScript", "REST APIs", "Cloud Sync");
-    } else {
-      score = 75;
-      risk = "Medium Risk - Require clarified payment terms";
-      deliverables.push("Clarify project scope", "Agree on milestone payouts");
-      skills.push("Communication", "Project Planning");
-    }
-
-    return res.json({
-      success: true,
-      fallbackUsed: !apiKey,
-      result: {
-        summary: `Analysis performed on input (${text.length} characters). Detected pattern: ${isCryptoScam ? 'Unverified High-Risk Offer' : isTechGig ? 'Verified Software Development Gig' : 'Standard Freelance Contract'}.`,
-        score,
-        riskAssessment: risk,
-        keyDeliverables: deliverables,
-        suggestedSkills: skills,
-        recommendation: isCryptoScam 
-          ? "Avoid this transaction or demand verified platform escrow before work." 
-          : "Proceed by setting up milestones and linking payment methods in CloudWorker AI.",
-      },
-    });
+    const suspicious = ["deposit", "usdt", "telegram", "guaranteed return", "رسوم قبل العمل", "ادفع قبل"].some((x) => lower.includes(x));
+    res.json({ success: true, fallbackUsed: true, result: {
+      summary: suspicious ? "العرض يحتوي مؤشرات تستوجب الحذر." : "عرض عمل عن بعد يحتاج تحققاً قبل التنفيذ.",
+      score: suspicious ? 25 : 72,
+      riskAssessment: suspicious ? "High Risk" : "Medium Risk",
+      keyDeliverables: suspicious ? ["لا تدفع أي مبلغ مقدماً", "تحقق من صاحب العمل"] : ["تحقق من نطاق العمل", "اتفق على الدفع والمراحل"],
+      suggestedSkills: [],
+      recommendation: suspicious ? "لا تدفع رسوماً أو عملة رقمية قبل التحقق من منصة دفع موثوقة." : "استخدم وسيلة دفع أو ضمان معروفة ولا تبدأ قبل وضوح شروط الدفع."
+    }});
   });
 
-  // Backup & Sync Endpoint
-  app.post("/api/sync", (req, res) => {
-    const { mode } = req.body || {};
-    res.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      mode: mode || "hybrid",
-      message: `Firebase cloud backup synchronized successfully in ${mode || "hybrid"} mode.`,
-      snapshotId: `snap-${Math.random().toString(36).substr(2, 9)}`,
-    });
+  app.post("/api/sync", (req, res) => res.json({ success: true, timestamp: new Date().toISOString(), mode: req.body?.mode || "hybrid", message: "تمت مزامنة بيانات مساحة العمل.", snapshotId: `snap-${Math.random().toString(36).slice(2, 11)}` }));
+
+  app.get("/api/opportunities", async (req, res) => {
+    const search = typeof req.query.search === "string" ? req.query.search : "";
+    const result = await aggregateRemoteJobs(search);
+    res.json({ success: true, ...result });
   });
 
-  // Opportunity Repository Endpoints (Port of Kotlin OpportunityRepository)
-  app.get("/api/opportunities", (req, res) => {
-    res.json({
-      success: true,
-      timestamp: new Date().toISOString(),
-      source: "Firebase Firestore / Cloud Sync",
-    });
-  });
+  app.patch("/api/opportunities/:id/status", (req, res) => res.json({ success: true, id: req.params.id, status: req.body?.status || "updated", timestamp: new Date().toISOString() }));
 
-  app.patch("/api/opportunities/:id/status", (req, res) => {
-    const { id } = req.params;
-    const { status } = req.body || {};
-    res.json({
-      success: true,
-      id,
-      status: status || "updated",
-      timestamp: new Date().toISOString(),
-    });
-  });
-
-  // Development vs Production middleware setup
   if (process.env.NODE_ENV !== "production") {
-    const vite = await createViteServer({
-      server: { middlewareMode: true },
-      appType: "spa",
-    });
+    const vite = await createViteServer({ server: { middlewareMode: true }, appType: "spa" });
     app.use(vite.middlewares);
   } else {
     const distPath = path.join(process.cwd(), "dist");
     app.use(express.static(distPath));
-    app.get("*", (req, res) => {
-      res.sendFile(path.join(distPath, "index.html"));
-    });
+    app.get("*", (_req, res) => res.sendFile(path.join(distPath, "index.html")));
   }
 
-  app.listen(PORT, "0.0.0.0", () => {
-    console.log(`CloudWorker AI server listening on http://0.0.0.0:${PORT}`);
-  });
+  app.listen(PORT, "0.0.0.0", () => console.log(`Marium AI Workspace server listening on ${PORT}`));
 }
 
 startServer();
