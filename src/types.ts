@@ -2,14 +2,7 @@ export type Language = 'en' | 'ar';
 
 export type WorkMode = 'local' | 'cloud' | 'hybrid';
 
-export type NavigationTab = 
-  | 'dashboard'
-  | 'ai-analyzer'
-  | 'opportunities'
-  | 'cloud-sync'
-  | 'security'
-  | 'payments'
-  | 'settings';
+export type NavigationTab = 'dashboard' | 'ai-analyzer' | 'opportunities' | 'cloud-sync' | 'security' | 'payments' | 'settings';
 
 export type OpportunityStatus = 'new' | 'accepted' | 'saved' | 'ignored' | 'suspicious';
 
@@ -19,18 +12,18 @@ export interface Opportunity {
   company: string;
   source?: string;
   category: string;
-  payoutValue: number; // Raw value or percentage rating
+  payoutValue: number;
   rawPayoutUSD: number;
   reward?: number;
   score?: number;
   riskScore?: number;
   status?: OpportunityStatus;
   createdAt?: number;
-  sourceReliability: number; // 0-100
+  sourceReliability: number;
   executionDurationDays: number;
-  executionDurationScore: number; // 0-100 derived
-  descriptionClarity: number; // 0-100
-  antiFraudScore: number; // 0-100
+  executionDurationScore: number;
+  descriptionClarity: number;
+  antiFraudScore: number;
   totalScore: number;
   riskLevel: 'Verified' | 'Low Risk' | 'Medium Risk' | 'High Risk';
   description: string;
@@ -38,14 +31,18 @@ export interface Opportunity {
   date: string;
   location: string;
   requiredSkills: string[];
+  applyUrl?: string;
+  sourceUrl?: string;
+  jobType?: string;
+  salaryText?: string;
 }
 
 export interface ScoreInput {
-  sourceReliability: number; // 0 - 100 (35%)
-  payoutValue: number;       // 0 - 100 (25%)
-  executionDuration: number; // 0 - 100 (15%)
-  descriptionClarity: number;// 0 - 100 (10%)
-  antiFraudFilter: number;   // 0 - 100 (15%)
+  sourceReliability: number;
+  payoutValue: number;
+  executionDuration: number;
+  descriptionClarity: number;
+  antiFraudFilter: number;
 }
 
 export interface ScoreBreakdown {
