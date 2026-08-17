@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">مريم AI</string>
+    <string name="welcome_message">مرحباً بك في مساحة عمل مريم AI للعمل الحر</string>
+    <string name="local_mode">العمل عبر التطبيق</string>
+    <string name="cloud_mode">العمل عبر السحابة</string>
+    <string name="hybrid_mode">الوضع المزدوج</string>
+</resources>

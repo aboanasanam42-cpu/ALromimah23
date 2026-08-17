@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "574862521859",
+    "project_id": "building-git-53976479-71cea",
+    "storage_bucket": "building-git-53976479-71cea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:574862521859:android:35909115c4355a4b104036",
+        "android_client_info": {
+          "package_name": "com.marium.aiworkspace"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEv4LC9XIL_qEzeA_rvhYmpZhiezB8Z_c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
