@@ -1,0 +1,8 @@
+{
+  "name": "CloudWorker AI",
+  "description": "Marium AI Workspace (مريم AI - مساحة العمل عن بُعد): Real-time remote opportunities scanner, 100-point AI scoring engine, proposal builder, project delivery pipeline, and earnings management with Firebase Cloud Sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
