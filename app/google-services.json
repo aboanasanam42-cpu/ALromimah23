@@ -12,7 +12,20 @@
           "package_name": "com.marium.aiworkspace"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "574862521859-i9cf8qibmab4e2539gvkvsgrgfqjnhfl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.marium.aiworkspace",
+            "certificate_hash": "62129cf6074ee8aa9bbbbdfb2aa48380fb19b92c"
+          }
+        },
+        {
+          "client_id": "574862521859-ddbfg3ugfamb48odo9id1s8ejjb1pnst.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyBEv4LC9XIL_qEzeA_rvhYmpZhiezB8Z_c"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "574862521859-ddbfg3ugfamb48odo9id1s8ejjb1pnst.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }
