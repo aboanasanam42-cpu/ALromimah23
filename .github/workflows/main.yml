@@ -1,107 +1,155 @@
-name: Build Android APK & Release
+name: Marium AI Workspace CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
   workflow_dispatch:
 
+env:
+  ANDROID_API: "35"
+  ANDROID_BUILD_TOOLS: "35.0.0"
+  NODE_VERSION: "20"
+  JAVA_VERSION: "17"
+
 jobs:
-  build-android-and-release:
+  build:
+    name: Validate, build and publish Android APK
     runs-on: ubuntu-latest
     permissions:
       contents: write
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Set up JDK 17
-      uses: actions/setup-java@v4
-      with:
-        distribution: 'temurin'
-        java-version: '17'
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: ${{ env.JAVA_VERSION }}
+          cache: gradle
 
-    - name: Set up Android SDK
-      uses: android-actions/setup-android@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
 
-    - name: Accept Android SDK Licenses
-      run: |
-        yes | sdkmanager --licenses || true
-        sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" || true
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
-    - name: Prepare local.properties
-      run: |
-        echo "sdk.dir=$ANDROID_HOME" > local.properties
+      - name: Install required Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDKMANAGER="${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER="$(command -v sdkmanager || true)"
+          fi
+          test -n "$SDKMANAGER" || { echo "sdkmanager was not installed"; exit 1; }
+          echo "Using sdkmanager: $SDKMANAGER"
+          "$SDKMANAGER" --version
+          yes | "$SDKMANAGER" --licenses >/dev/null || true
+          "$SDKMANAGER" "platform-tools" "platforms;android-${ANDROID_API}" "build-tools;${ANDROID_BUILD_TOOLS}"
+          test -d "${ANDROID_HOME}/platforms/android-${ANDROID_API}"
+          test -d "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}"
 
-    - name: Make Gradle Wrapper Executable and Verify JAR
-      run: |
-        chmod +x gradlew
-        if [ ! -s gradle/wrapper/gradle-wrapper.jar ] || ! unzip -t gradle/wrapper/gradle-wrapper.jar >/dev/null 2>&1; then
-          echo "Restoring official Gradle Wrapper JAR..."
-          mkdir -p gradle/wrapper
-          curl -sSL https://raw.githubusercontent.com/gradle/gradle/v8.7.0/gradle/wrapper/gradle-wrapper.jar -o gradle/wrapper/gradle-wrapper.jar
-        fi
+      - name: Prepare Gradle
+        shell: bash
+        run: |
+          set -euo pipefail
+          chmod +x gradlew
+          test -s gradle/wrapper/gradle-wrapper.jar
+          unzip -t gradle/wrapper/gradle-wrapper.jar >/dev/null
+          echo "sdk.dir=${ANDROID_HOME}" > local.properties
 
-    - name: Ensure Android Configuration Files Exist
-      run: |
-        if [ ! -f app/google-services.json ]; then
-          echo "Restoring google-services.json..."
-          echo '{"project_info":{"project_number":"574862521859","project_id":"building-git-53976479-71cea","storage_bucket":"building-git-53976479-71cea.firebasestorage.app"},"client":[{"client_info":{"mobilesdk_app_id":"1:574862521859:android:35909115c4355a4b104036","android_client_info":{"package_name":"com.marium.aiworkspace"}},"oauth_client":[{"client_id":"574862521859-i9cf8qibmab4e2539gvkvsgrgfqjnhfl.apps.googleusercontent.com","client_type":1,"android_info":{"package_name":"com.marium.aiworkspace","certificate_hash":"62129cf6074ee8aa9bbbbdfb2aa48380fb19b92c"}},{"client_id":"574862521859-ddbfg3ugfamb48odo9id1s8ejjb1pnst.apps.googleusercontent.com","client_type":3}],"api_key":[{"current_key":"AIzaSyBEv4LC9XIL_qEzeA_rvhYmpZhiezB8Z_c"}],"services":{"appinvite_service":{"other_platform_oauth_client":[{"client_id":"574862521859-ddbfg3ugfamb48odo9id1s8ejjb1pnst.apps.googleusercontent.com","client_type":3}]}}}],"configuration_version":"1"}' > app/google-services.json
-        fi
+      - name: Install web dependencies
+        run: npm ci
 
-    - name: Build Android APK
-      run: |
-        ./gradlew assembleDebug assembleRelease --no-daemon --stacktrace || ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: TypeScript validation
+        run: npm run lint
 
-    - name: Prepare APK Outputs
-      run: |
-        mkdir -p apks-dist
-        find app/build/outputs/apk -name "*.apk" -exec cp {} apks-dist/ \;
-        echo "=== Generated APK Files ==="
-        ls -la apks-dist/
+      - name: Build web application
+        run: npm run build
 
-    - name: Set up Node.js for Web Bundle
-      uses: actions/setup-node@v4
-      with:
-        node-version: 20
+      - name: Configure release signing when secrets are available
+        shell: bash
+        env:
+          RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          RELEASE_KEYSTORE_PASSWORD: ${{ secrets.RELEASE_KEYSTORE_PASSWORD }}
+          RELEASE_KEY_ALIAS: ${{ secrets.RELEASE_KEY_ALIAS }}
+          RELEASE_KEY_PASSWORD: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -n "${RELEASE_KEYSTORE_BASE64:-}" ]; then
+            echo "$RELEASE_KEYSTORE_BASE64" | base64 --decode > app/release-upload.jks
+            cat > app/key.properties <<EOF
+          storePassword=${RELEASE_KEYSTORE_PASSWORD}
+          keyPassword=${RELEASE_KEY_PASSWORD}
+          keyAlias=${RELEASE_KEY_ALIAS}
+          storeFile=release-upload.jks
+          EOF
+            echo "Production signing keystore configured from GitHub Secrets."
+          else
+            echo "No production keystore secret configured; release APK will use the non-production fallback signing configuration."
+          fi
 
-    - name: Build Web Application Bundle
-      run: |
-        npm ci || npm install
-        npm run build || true
-        mkdir -p apks-dist/web-bundle
-        cp -r dist apks-dist/web-bundle/ 2>/dev/null || true
-        zip -r apks-dist/maria-web-app.zip dist/ 2>/dev/null || true
+      - name: Build Android debug and release APKs
+        run: ./gradlew clean assembleDebug assembleRelease --no-daemon --stacktrace
 
-    - name: Upload APK & Web Artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: Maria-AI-Workspace-APK-v1.0.${{ github.run_number }}
-        path: apks-dist/
+      - name: Verify APK outputs
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          test -f app/build/outputs/apk/release/app-release.apk
+          mkdir -p apks-dist
+          cp app/build/outputs/apk/debug/app-debug.apk apks-dist/Marium-AI-Workspace-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk apks-dist/Marium-AI-Workspace-release.apk
+          cp -r dist apks-dist/web-bundle
+          (cd apks-dist && sha256sum *.apk > SHA256SUMS.txt)
+          ls -lh apks-dist/
 
-    - name: Create GitHub Release with APK
-      if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch' }}
-      uses: softprops/action-gh-release@v1
-      with:
-        tag_name: v1.0.${{ github.run_number }}-apk
-        name: 📱 Maria AI Workspace APK v1.0.${{ github.run_number }}
-        body: |
-          ### 📱 تطبيق مريم AI - مساحة العمل الذكية (Android APK)
-          تم بناء التطبيق بنجاح عبر GitHub Actions. يمكنك تحميل وتثبيت ملف الـ APK مباشرة على هاتفك الأندرويد.
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Marium-AI-Workspace-${{ github.run_number }}
+          path: apks-dist/
+          if-no-files-found: error
+          retention-days: 14
 
-          #### ✨ المزايا المضمنة في هذا الإصدار:
-          - **المجالات الـ 10 الكاملة للعمل عن بُعد**: الحسابات والمالية، إدارة المشاريع، الذكاء الاصطناعي والأتمتة، التصميم والمونتاج، الترجمة واللغات، الدعم الفني، التسويق الرقمي، تطوير البرمجيات، الكتابة وصناعة المحتوى، الاستشارات والتدريب.
-          - **نظام تحليل الفرص وتوليد العروض بالذكاء الاصطناعي**.
-          - **التكامل السحابي والأمان وبصمات Firebase**.
+      - name: Publish GitHub Release
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch' }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v2.0.${{ github.run_number }}
+          name: Marium AI Workspace v2.0.${{ github.run_number }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          body: |
+            ## مريم AI — مساحة العمل الذكية
 
-          #### 📥 روابط التحميل المباشرة:
-          - **تحميل ملف التثبيت المباشر (APK)**: تجد الملفات أدناه تحت قسم Assets (`app-release.apk` / `app-debug.apk`).
-        draft: false
-        prerelease: false
-        files: |
-          apks-dist/*.apk
-          apks-dist/*.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+            إصدار Android تم التحقق من بنائه عبر GitHub Actions.
+
+            ### الملفات
+            - `Marium-AI-Workspace-release.apk` — نسخة الإصدار.
+            - `Marium-AI-Workspace-debug.apk` — نسخة الاختبار.
+            - `SHA256SUMS.txt` — بصمات الملفات للتحقق من سلامة التنزيل.
+            - `web-bundle/` — نسخة تطبيق الويب.
+
+            ### الوظائف الأساسية
+            - اكتشاف فرص العمل عن بُعد.
+            - تقييم الفرص ومؤشرات الاحتيال.
+            - تحليل AI وتوليد عروض العمل.
+            - إدارة المشاريع والتسليم.
+            - إدارة بيانات الدفع والأرباح.
+            - المزامنة السحابية.
+            - واجهة عربية RTL.
+          files: |
+            apks-dist/*.apk
+            apks-dist/SHA256SUMS.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
