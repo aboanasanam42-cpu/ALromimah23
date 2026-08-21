@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.payments.data
+package ai.albader.alromimh.com.payments.data
 
 // Placeholder for encrypted local storage for payment methods
 class PaymentDataSource {

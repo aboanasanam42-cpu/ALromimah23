@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.core.security
+package ai.albader.alromimh.com.core.security
 
 // Placeholder for Biometric, PIN, and local AES encryption wrappers
 class BiometricWrapper {

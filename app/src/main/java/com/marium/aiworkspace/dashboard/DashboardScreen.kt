@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.dashboard
+package ai.albader.alromimh.com.dashboard
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -21,7 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.marium.aiworkspace.navigation.AppDestinations
+import ai.albader.alromimh.com.navigation.AppDestinations
 
 data class DashboardItem(
     val title: String,

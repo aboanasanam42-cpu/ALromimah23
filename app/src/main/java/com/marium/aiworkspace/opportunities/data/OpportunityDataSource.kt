@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.opportunities.data
+package ai.albader.alromimh.com.opportunities.data
 
 // Placeholder for Firestore remote data sources & local cache
 class OpportunityDataSource {

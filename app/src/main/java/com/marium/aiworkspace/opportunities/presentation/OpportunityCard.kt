@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.opportunities.presentation
+package ai.albader.alromimh.com.opportunities.presentation
 
 import androidx.compose.runtime.Composable
 

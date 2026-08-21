@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.cloud.sync
+package ai.albader.alromimh.com.cloud.sync
 
 // Placeholder for Background worker synchronization logic
 class CloudSyncWorker {

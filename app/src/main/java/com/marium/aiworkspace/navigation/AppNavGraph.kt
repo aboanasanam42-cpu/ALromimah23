@@ -1,14 +1,14 @@
-package com.marium.aiworkspace.navigation
+package ai.albader.alromimh.com.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.marium.aiworkspace.ai.analysis.AIAnalysisScreen
-import com.marium.aiworkspace.dashboard.DashboardScreen
-import com.marium.aiworkspace.payments.presentation.PaymentScreen
-import com.marium.aiworkspace.settings.SettingsScreen
+import ai.albader.alromimh.com.ai.analysis.AIAnalysisScreen
+import ai.albader.alromimh.com.dashboard.DashboardScreen
+import ai.albader.alromimh.com.payments.presentation.PaymentScreen
+import ai.albader.alromimh.com.settings.SettingsScreen
 
 object AppDestinations {
     const val DASHBOARD = "dashboard"

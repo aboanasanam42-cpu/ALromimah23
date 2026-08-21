@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.opportunities.domain
+package ai.albader.alromimh.com.opportunities.domain
 
 // Placeholder for use cases for opportunity filtering and evaluation
 class OpportunityUseCases {

@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.ui.theme
+package ai.albader.alromimh.com.ui.theme
 
 import android.app.Activity
 import android.os.Build

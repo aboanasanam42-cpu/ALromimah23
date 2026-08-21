@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.core.network
+package ai.albader.alromimh.com.core.network
 
 // Placeholder for API clients and internet monitoring
 class NetworkClient {

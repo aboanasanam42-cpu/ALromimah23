@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.cloud.backup
+package ai.albader.alromimh.com.cloud.backup
 
 // Placeholder for Automated encrypted Firebase database backups
 class FirebaseBackupManager {

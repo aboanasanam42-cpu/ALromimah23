@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.auth.data
+package ai.albader.alromimh.com.auth.data
 
 // Placeholder for authentication repositories
 class AuthRepository {

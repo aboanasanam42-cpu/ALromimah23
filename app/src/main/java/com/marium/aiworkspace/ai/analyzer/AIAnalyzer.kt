@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.ai.analyzer
+package ai.albader.alromimh.com.ai.analyzer
 
 // Placeholder for Integration with Google AI Studio / Hugging Face endpoints
 class AIAnalyzer {

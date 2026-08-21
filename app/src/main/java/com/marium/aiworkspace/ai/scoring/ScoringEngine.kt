@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.ai.scoring
+package ai.albader.alromimh.com.ai.scoring
 
 // Placeholder for The 100-point evaluation scoring algorithm engine
 class ScoringEngine {

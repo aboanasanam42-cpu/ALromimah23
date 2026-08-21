@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.core.localization
+package ai.albader.alromimh.com.core.localization
 
 import android.content.Context
 import java.util.Locale

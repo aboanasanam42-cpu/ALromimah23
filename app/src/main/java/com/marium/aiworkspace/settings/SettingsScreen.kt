@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.settings
+package ai.albader.alromimh.com.settings
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

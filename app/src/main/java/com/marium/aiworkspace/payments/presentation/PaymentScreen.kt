@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.payments.presentation
+package ai.albader.alromimh.com.payments.presentation
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column

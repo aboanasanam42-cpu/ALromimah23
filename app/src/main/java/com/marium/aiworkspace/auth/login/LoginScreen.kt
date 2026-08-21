@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.auth.login
+package ai.albader.alromimh.com.auth.login
 
 import androidx.compose.runtime.Composable
 

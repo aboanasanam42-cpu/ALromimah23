@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.ai.analysis
+package ai.albader.alromimh.com.ai.analysis
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -30,7 +30,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.marium.aiworkspace.ai.analyzer.AIAnalyzer
+import ai.albader.alromimh.com.ai.analyzer.AIAnalyzer
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

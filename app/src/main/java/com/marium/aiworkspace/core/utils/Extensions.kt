@@ -1,4 +1,4 @@
-package com.marium.aiworkspace.core.utils
+package ai.albader.alromimh.com.core.utils
 
 // Placeholder for common extension functions and helpers
 object Extensions {

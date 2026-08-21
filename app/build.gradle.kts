@@ -1,15 +1,24 @@
+import java.io.FileInputStream
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("com.google.gms.google-services")
 }
 
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("app/key.properties")
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+}
+
 android {
-    namespace = "com.marium.aiworkspace"
+    namespace = "ai.albader.alromimh.com"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.marium.aiworkspace"
+        applicationId = "ai.albader.alromimh.com"
         minSdk = 24
         targetSdk = 35
         versionCode = 1
@@ -23,10 +32,10 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = file("upload-keystore.jks")
-            storePassword = System.getenv("CM_KEYSTORE_PASSWORD") ?: ""
-            keyAlias = System.getenv("CM_KEY_ALIAS") ?: ""
-            keyPassword = System.getenv("CM_KEY_PASSWORD") ?: ""
+            storeFile = file(keystoreProperties.getProperty("storeFile", System.getenv("CM_KEYSTORE_FILE") ?: "upload-keystore.jks"))
+            storePassword = keystoreProperties.getProperty("storePassword", System.getenv("CM_KEYSTORE_PASSWORD") ?: "")
+            keyAlias = keystoreProperties.getProperty("keyAlias", System.getenv("CM_KEY_ALIAS") ?: "")
+            keyPassword = keystoreProperties.getProperty("keyPassword", System.getenv("CM_KEY_PASSWORD") ?: "")
         }
     }
 
@@ -48,7 +57,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.1"
+        kotlinCompilerExtensionVersion = "1.5.14"
     }
     packaging {
         resources {
