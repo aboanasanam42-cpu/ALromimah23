@@ -9,3 +9,10 @@ dist-ssr
 *.log
 .system_generated
 .aistudio
+
+# Android local/build files
+local.properties
+app/key.properties
+app/*.jks
+app/*.keystore
+app/release-upload.jks
