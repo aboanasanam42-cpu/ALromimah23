@@ -8,6 +8,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.navigation.compose.rememberNavController
 import com.marium.aiworkspace.navigation.AppNavGraph
 import com.marium.aiworkspace.ui.theme.CloudWorkerAITheme
@@ -17,7 +20,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             CloudWorkerAITheme {
-                AppNavigationHost()
+                CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
+                    AppNavigationHost()
+                }
             }
         }
     }
