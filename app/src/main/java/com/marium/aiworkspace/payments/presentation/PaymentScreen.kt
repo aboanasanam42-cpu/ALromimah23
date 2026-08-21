@@ -6,14 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,13 +19,10 @@ fun PaymentScreen(navController: NavController) {
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Payments") },
+                title = { Text("المحفظة والمدفوعات") },
                 navigationIcon = {
                     IconButton(onClick = { navController.popBackStack() }) {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowBack,
-                            contentDescription = "Back"
-                        )
+                        Icon(Icons.Filled.ArrowBack, contentDescription = "رجوع")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -42,18 +33,19 @@ fun PaymentScreen(navController: NavController) {
         }
     ) { padding ->
         Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(padding)
-                .padding(16.dp),
+            modifier = Modifier.fillMaxSize().padding(padding).padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Text("Payments & subscriptions", style = MaterialTheme.typography.titleLarge)
+            Icon(Icons.Default.AccountBalanceWallet, contentDescription = null)
+            Text("إدارة الأرباح ووسائل الاستلام", style = MaterialTheme.typography.titleLarge)
             Text(
-                "Wallets, bank accounts, and billing management are available from here.",
+                "أضف بيانات وسيلة الاستلام التي تختارها واحفظها محلياً بشكل آمن. التطبيق لا يرسل الأموال تلقائياً؛ استلام المبلغ يعتمد على منصة العمل أو العميل.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
+            Text("الرصيد المسجل: 0.00 دولار", style = MaterialTheme.typography.titleMedium)
+            Text("الأرباح المعلقة: 0.00 دولار", style = MaterialTheme.typography.bodyLarge)
+            Text("المبالغ المستلمة: 0.00 دولار", style = MaterialTheme.typography.bodyLarge)
         }
     }
 }
