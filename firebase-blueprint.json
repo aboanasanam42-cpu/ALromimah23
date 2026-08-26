@@ -1,0 +1,152 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile and account preferences",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "photoURL": { "type": "string", "maxLength": 512 },
+        "language": { "type": "string", "enum": ["ar", "en"] },
+        "workMode": { "type": "string", "enum": ["local", "cloud", "hybrid"] },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "email"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "Work and freelance opportunities curated or created by user",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "company": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 128 },
+        "payoutValue": { "type": "number" },
+        "rawPayoutUSD": { "type": "number" },
+        "sourceReliability": { "type": "number" },
+        "executionDurationDays": { "type": "number" },
+        "executionDurationScore": { "type": "number" },
+        "descriptionClarity": { "type": "number" },
+        "antiFraudScore": { "type": "number" },
+        "totalScore": { "type": "number" },
+        "riskLevel": { "type": "string", "enum": ["Verified", "Low Risk", "Medium Risk", "High Risk"] },
+        "description": { "type": "string", "maxLength": 4000 },
+        "verified": { "type": "boolean" },
+        "status": { "type": "string", "enum": ["new", "accepted", "saved", "ignored", "suspicious"] },
+        "date": { "type": "string", "maxLength": 64 },
+        "location": { "type": "string", "maxLength": 128 },
+        "requiredSkills": { "type": "array" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "company", "category", "rawPayoutUSD", "totalScore"]
+    },
+    "ActiveProject": {
+      "title": "ActiveProject",
+      "description": "Active user projects under execution, review, or payment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "client": { "type": "string", "maxLength": 128 },
+        "category": { "type": "string", "maxLength": 128 },
+        "payoutUSD": { "type": "number" },
+        "progress": { "type": "number" },
+        "deadline": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["working", "in_review", "delivered", "paid"] },
+        "description": { "type": "string", "maxLength": 4000 },
+        "deliverables": { "type": "array" },
+        "steps": { "type": "array" },
+        "notes": { "type": "string", "maxLength": 2000 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "title", "client", "payoutUSD", "status", "progress"]
+    },
+    "PaymentMethod": {
+      "title": "PaymentMethod",
+      "description": "User payout and wallet receiving methods",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "type": { "type": "string", "enum": ["bank", "wallet", "card"] },
+        "name": { "type": "string", "maxLength": 128 },
+        "provider": { "type": "string", "maxLength": 128 },
+        "accountNumber": { "type": "string", "maxLength": 128 },
+        "balance": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "isDefault": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "type", "name", "provider", "accountNumber", "balance"]
+    },
+    "Transaction": {
+      "title": "Transaction",
+      "description": "Financial records of payouts, deposits, and rewards",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "date": { "type": "string", "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 256 },
+        "amount": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "status": { "type": "string", "enum": ["completed", "processing", "failed"] },
+        "type": { "type": "string", "enum": ["payout", "deposit", "subscription", "fee"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "date", "description", "amount", "status", "type"]
+    },
+    "SyncLog": {
+      "title": "SyncLog",
+      "description": "Logs of cloud synchronization actions",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "timestamp": { "type": "string", "maxLength": 64 },
+        "type": { "type": "string", "enum": ["backup", "sync", "restore"] },
+        "mode": { "type": "string", "enum": ["local", "cloud", "hybrid"] },
+        "status": { "type": "string", "enum": ["success", "pending", "failed"] },
+        "size": { "type": "string", "maxLength": 64 },
+        "details": { "type": "string", "maxLength": 512 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "userId", "timestamp", "type", "mode", "status", "size", "details"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Individual user document containing profile and preferences"
+    },
+    "/opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "Collection of user-managed freelance and work opportunities"
+    },
+    "/projects/{projectId}": {
+      "schema": "ActiveProject",
+      "description": "Active and delivered user client projects"
+    },
+    "/paymentMethods/{paymentMethodId}": {
+      "schema": "PaymentMethod",
+      "description": "Configured user payout wallets and accounts"
+    },
+    "/transactions/{transactionId}": {
+      "schema": "Transaction",
+      "description": "User earnings and transaction history"
+    },
+    "/syncLogs/{syncLogId}": {
+      "schema": "SyncLog",
+      "description": "Synchronization and backup history records"
+    }
+  }
+}

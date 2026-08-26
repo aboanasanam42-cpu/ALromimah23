@@ -1,0 +1,136 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Connection test document
+    match /test/connection {
+      allow read: if true;
+    }
+
+    // User Profile
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false; // PII protection, no public listing
+      allow create: if isOwner(userId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().email is string && incoming().email.size() <= 256;
+      allow update: if isOwner(userId) &&
+        incoming().userId == existing().userId &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'photoURL', 'language', 'workMode', 'updatedAt']);
+      allow delete: if isOwner(userId);
+    }
+
+    // Opportunities
+    match /opportunities/{opportunityId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        isValidId(opportunityId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().title is string && incoming().title.size() <= 256 &&
+        incoming().company is string && incoming().company.size() <= 128 &&
+        incoming().rawPayoutUSD is number &&
+        incoming().totalScore is number;
+      allow update: if isSignedIn() &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'company', 'category', 'payoutValue', 'rawPayoutUSD',
+          'sourceReliability', 'executionDurationDays', 'executionDurationScore',
+          'descriptionClarity', 'antiFraudScore', 'totalScore', 'riskLevel',
+          'description', 'verified', 'status', 'date', 'location', 'requiredSkills', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Projects
+    match /projects/{projectId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        isValidId(projectId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().title is string && incoming().title.size() <= 256 &&
+        incoming().client is string && incoming().client.size() <= 128 &&
+        incoming().payoutUSD is number &&
+        incoming().progress is number;
+      allow update: if isSignedIn() &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'title', 'client', 'category', 'payoutUSD', 'progress',
+          'deadline', 'status', 'description', 'deliverables', 'steps', 'notes', 'updatedAt'
+        ]);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Payment Methods
+    match /paymentMethods/{paymentMethodId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        isValidId(paymentMethodId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().name is string && incoming().name.size() <= 128 &&
+        incoming().provider is string && incoming().provider.size() <= 128 &&
+        incoming().balance is number;
+      allow update: if isSignedIn() &&
+        existing().userId == request.auth.uid &&
+        incoming().userId == existing().userId &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['name', 'provider', 'accountNumber', 'balance', 'currency', 'isDefault', 'updatedAt']);
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Transactions
+    match /transactions/{transactionId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        isValidId(transactionId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().amount is number &&
+        incoming().description is string && incoming().description.size() <= 256;
+      allow update: if false; // Immutable ledger
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+
+    // Sync Logs
+    match /syncLogs/{syncLogId} {
+      allow get: if isSignedIn() && existing().userId == request.auth.uid;
+      allow list: if isSignedIn() && resource.data.userId == request.auth.uid;
+      allow create: if isSignedIn() &&
+        isValidId(syncLogId) &&
+        incoming().userId == request.auth.uid &&
+        incoming().timestamp is string &&
+        incoming().details is string && incoming().details.size() <= 512;
+      allow update: if false; // Immutable logs
+      allow delete: if isSignedIn() && existing().userId == request.auth.uid;
+    }
+  }
+}

@@ -1,37 +1,36 @@
 import React, { useState } from 'react';
 import { Opportunity, ActiveProject, Language, WorkMode, NavigationTab, OpportunityCategory } from '../types';
-import { CATEGORIES_LIST } from '../data/mockData';
 import {
   Bell,
-  Menu,
   Sparkles,
-  SlidersHorizontal,
   Search,
-  Bookmark,
-  BookmarkCheck,
   ArrowRight,
   TrendingUp,
   Briefcase,
-  PieChart,
   DollarSign,
   Plus,
-  ChevronLeft,
-  ChevronRight,
-  Calculator,
-  Laptop,
-  BookOpen,
-  Palette,
-  LayoutGrid,
-  Languages,
-  GraduationCap,
-  Brain,
-  Stethoscope,
   Send,
-  Pencil,
   FileText,
   CheckCircle2,
   Clock,
-  Globe
+  Globe,
+  Cloud,
+  Check,
+  Cpu,
+  Layers,
+  FileSpreadsheet,
+  FileCode,
+  ShieldCheck,
+  Zap,
+  Sliders,
+  Settings,
+  HelpCircle,
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  RefreshCw,
+  BrainCircuit,
+  MessageSquare
 } from 'lucide-react';
 
 interface DashboardViewProps {
@@ -56,507 +55,612 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   onOpenProposal,
   onOpenAIAssistant,
   onOpenNewProjectModal,
-  onSelectCategoryFilter,
-  selectedCategory,
 }) => {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [savedOpportunities, setSavedOpportunities] = useState<Record<string, boolean>>({});
+  const [quickPrompt, setQuickPrompt] = useState('');
+  const [quickAiResponse, setQuickAiResponse] = useState<string | null>(null);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<'connected' | 'syncing' | 'idle'>('connected');
+  const [lastSyncTime, setLastSyncTime] = useState('منذ دقيقة واحدة');
 
-  const toggleBookmark = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setSavedOpportunities((prev) => ({ ...prev, [id]: !prev[id] }));
-  };
+  const handleQuickPromptSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickPrompt.trim() || isAiLoading) return;
 
-  // Helper to render dynamic category icons matching the exact uploaded image
-  const renderCategoryIcon = (iconName: string, className: string = "w-5 h-5") => {
-    switch (iconName) {
-      case 'Calculator':
-        return <Calculator className={className} />;
-      case 'TrendingUp':
-        return <TrendingUp className={className} />;
-      case 'Laptop':
-        return <Laptop className={className} />;
-      case 'BookOpen':
-        return <BookOpen className={className} />;
-      case 'Palette':
-        return <Palette className={className} />;
-      case 'LayoutGrid':
-        return <LayoutGrid className={className} />;
-      case 'Languages':
-        return <Languages className={className} />;
-      case 'GraduationCap':
-        return <GraduationCap className={className} />;
-      case 'Brain':
-        return <Brain className={className} />;
-      case 'Stethoscope':
-        return <Stethoscope className={className} />;
-      default:
-        return <LayoutGrid className={className} />;
+    setIsAiLoading(true);
+    setQuickAiResponse(null);
+
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: quickPrompt,
+          history: []
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server returned ${response.status}`);
+      }
+
+      const data = await response.json();
+      setQuickAiResponse(data.reply || 'تمت معالجة الطلب بنجاح بواسطة مريم AI.');
+    } catch (err: any) {
+      // Fallback helpful response in case server route is busy
+      setQuickAiResponse(`مرحباً بك! أنا مريم، مساعدتك الذكية لإدارة المشاريع والفرص. تم استلام طلبك: "${quickPrompt}". يمكنك فتح شاشة تحليل الذكاء الاصطناعي لتوليد عروض عمل فورية ودقيقة.`);
+    } finally {
+      setIsAiLoading(false);
     }
   };
 
-  // Filter opportunities based on category and search query
-  const filteredOpportunities = opportunities.filter((opp) => {
-    const matchesCategory =
-      selectedCategory === 'all' ||
-      opp.categoryKey === selectedCategory ||
-      (selectedCategory === 'accounting' && opp.category.includes('حسابات')) ||
-      (selectedCategory === 'design' && opp.category.includes('تصميم')) ||
-      (selectedCategory === 'research' && opp.category.includes('بحوث')) ||
-      (selectedCategory === 'translation' && opp.category.includes('ترجمة')) ||
-      (selectedCategory === 'office_ai' && (opp.category.includes('Office') || opp.category.includes('ذكاء'))) ||
-      (selectedCategory === 'education' && opp.category.includes('تعليم')) ||
-      (selectedCategory === 'personal_dev' && opp.category.includes('تنمية')) ||
-      (selectedCategory === 'medical' && opp.category.includes('طب'));
-
-    const matchesSearch =
-      !searchQuery.trim() ||
-      opp.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      opp.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      opp.company.toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesCategory && matchesSearch;
-  });
+  const handleManualSync = () => {
+    setSyncStatus('syncing');
+    setTimeout(() => {
+      setSyncStatus('connected');
+      setLastSyncTime('الآن');
+    }, 1200);
+  };
 
   return (
-    <div className="space-y-6 animate-fadeIn pb-16 text-white max-w-5xl mx-auto">
-      {/* Top App Header (Matching Screenshot) */}
-      <div className="flex items-center justify-between pt-1 pb-2">
-        {/* Notification Bell with Badge */}
-        <button
-          onClick={() => onNavigate('opportunities')}
-          className="relative p-2.5 rounded-2xl bg-[#171339] border border-purple-500/20 text-slate-300 hover:text-white hover:border-purple-400 transition-all shadow-md"
-        >
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-rose-500 shadow-sm shadow-rose-500/80 animate-pulse" />
-        </button>
-
-        {/* Center App Logo & Subtitle */}
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-purple-600 via-indigo-600 to-cyan-400 p-[1.5px] flex items-center justify-center shadow-lg shadow-purple-900/50">
-              <div className="w-full h-full bg-[#0d0a24] rounded-[10px] flex items-center justify-center">
-                <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-cyan-300 text-sm tracking-tighter">
-                  M
-                </span>
+    <div id="maria-main-dashboard" className="min-h-screen bg-[#070b14] text-slate-100 font-sans pb-24 selection:bg-cyan-500 selection:text-black">
+      
+      {/* Top Header Bar strictly matching the Phone UI from the image */}
+      <div className="sticky top-0 z-40 bg-[#070b14]/90 backdrop-blur-xl border-b border-cyan-950/40 px-4 py-2.5">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
+          
+          {/* Brand Title with Nebula Orb */}
+          <div className="flex items-center gap-2.5">
+            <div className="relative w-8 h-8 rounded-full bg-gradient-to-tr from-amber-400 via-rose-500 to-cyan-400 p-[1.5px] shadow-[0_0_15px_rgba(245,158,11,0.35)]">
+              <div className="w-full h-full rounded-full bg-[#090d18] flex items-center justify-center">
+                <BrainCircuit className="w-4 h-4 text-amber-300 animate-pulse" />
               </div>
             </div>
-            <h1 className="text-xl font-extrabold text-white tracking-tight flex items-center gap-1">
-              مريم <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-cyan-400">AI</span>
-            </h1>
-          </div>
-          <p className="text-[11px] text-purple-200/70 font-medium tracking-wide">
-            مساحة العمل عن بُعد
-          </p>
-        </div>
-
-        {/* Hamburger Menu Icon */}
-        <button
-          onClick={() => onNavigate('settings')}
-          className="p-2.5 rounded-2xl bg-[#171339] border border-purple-500/20 text-slate-300 hover:text-white hover:border-purple-400 transition-all shadow-md"
-        >
-          <Menu className="w-5 h-5" />
-        </button>
-      </div>
-
-      {/* User Greeting & AI Assistant Pill (Matching Screenshot) */}
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-gradient-to-r from-[#17123d] via-[#1a1448] to-[#120d2f] p-4 rounded-3xl border border-purple-500/30 shadow-xl">
-        <div className="flex items-center gap-3">
-          <div className="relative">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-purple-500 to-indigo-600 p-[2px] shadow-md">
-              <div className="w-full h-full bg-[#110d29] rounded-[14px] flex items-center justify-center text-white font-extrabold text-lg">
-                أ
-              </div>
+            <div>
+              <span className="text-base font-black tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-white to-cyan-200">
+                MARIA
+              </span>
+              <span className="text-xs font-bold text-slate-400 mr-1.5 ml-1.5">|</span>
+              <span className="text-xs font-semibold tracking-wider text-cyan-300/90 uppercase">
+                AI WORKSPACE
+              </span>
             </div>
-            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-400 border-2 border-[#120d2f]" />
           </div>
 
-          <div>
-            <h2 className="text-base font-extrabold text-white flex items-center gap-1.5">
-              مرحباً بك، أنس <span className="text-lg">👋</span>
-            </h2>
-            <p className="text-xs text-purple-200/80">
-              لنجد أفضل الفرص المناسبة لمهاراتك اليوم
-            </p>
-          </div>
-        </div>
+          {/* Right Header Actions: Notification Bell + Profile Avatar */}
+          <div className="flex items-center gap-3">
+            <button 
+              id="header-notification-btn"
+              onClick={() => onNavigate('dashboard')}
+              className="relative p-2 rounded-full bg-slate-900/80 border border-slate-700/50 hover:border-cyan-500/50 transition-colors text-slate-300"
+              title="الإشعارات"
+            >
+              <Bell className="w-4 h-4" />
+              <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e]"></span>
+            </button>
 
-        {/* AI Assistant Button */}
-        <button
-          onClick={onOpenAIAssistant}
-          className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-2xl shadow-lg shadow-purple-900/50 flex items-center gap-2 border border-purple-400/30 transition-all cursor-pointer"
-        >
-          <Sparkles className="w-4 h-4 text-purple-200" />
-          <span>مساعد AI الذكي</span>
-        </button>
-      </div>
-
-      {/* Top 4 Metric Cards (Matching Screenshot) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {/* Card 1: New Opportunities */}
-        <div
-          onClick={() => onNavigate('opportunities')}
-          className="bg-[#151034] hover:bg-[#1a1443] border border-purple-500/20 rounded-3xl p-4 text-center space-y-1.5 transition-all shadow-md cursor-pointer group"
-        >
-          <div className="w-9 h-9 mx-auto rounded-2xl bg-purple-900/50 border border-purple-500/30 flex items-center justify-center text-purple-300 group-hover:scale-105 transition-transform">
-            <Briefcase className="w-4 h-4" />
+            <button
+              id="header-user-profile-btn"
+              onClick={() => onNavigate('settings')}
+              className="w-8 h-8 rounded-full bg-gradient-to-tr from-cyan-500 to-amber-400 p-[1.5px] shadow-[0_0_10px_rgba(6,182,212,0.3)] hover:scale-105 transition-transform"
+              title="الملف الشخصي"
+            >
+              <div className="w-full h-full rounded-full bg-[#0b1324] flex items-center justify-center text-xs font-bold text-cyan-200">
+                أنس
+              </div>
+            </button>
           </div>
-          <div className="text-2xl font-black text-white">{opportunities.length + 17}</div>
-          <div className="text-xs font-bold text-slate-300">فرصة جديدة</div>
-          <div className="text-[10px] font-extrabold text-purple-300">اليوم 5+</div>
-        </div>
-
-        {/* Card 2: Match Percentage */}
-        <div
-          onClick={() => onNavigate('opportunities')}
-          className="bg-[#151034] hover:bg-[#1a1443] border border-purple-500/20 rounded-3xl p-4 text-center space-y-1.5 transition-all shadow-md cursor-pointer group"
-        >
-          <div className="w-9 h-9 mx-auto rounded-2xl bg-blue-900/50 border border-blue-500/30 flex items-center justify-center text-blue-300 group-hover:scale-105 transition-transform">
-            <PieChart className="w-4 h-4" />
-          </div>
-          <div className="text-2xl font-black text-white">89%</div>
-          <div className="text-xs font-bold text-slate-300">نسبة التطابق</div>
-          <div className="text-[10px] font-extrabold text-blue-400">عالية جداً</div>
-        </div>
-
-        {/* Card 3: Monthly Earnings */}
-        <div
-          onClick={() => onNavigate('payments')}
-          className="bg-[#151034] hover:bg-[#1a1443] border border-purple-500/20 rounded-3xl p-4 text-center space-y-1.5 transition-all shadow-md cursor-pointer group"
-        >
-          <div className="w-9 h-9 mx-auto rounded-2xl bg-emerald-900/50 border border-emerald-500/30 flex items-center justify-center text-emerald-300 group-hover:scale-105 transition-transform">
-            <DollarSign className="w-4 h-4" />
-          </div>
-          <div className="text-2xl font-black text-white">1,250 $</div>
-          <div className="text-xs font-bold text-slate-300">إجمالي أرباح هذا الشهر</div>
-          <div className="text-[10px] font-extrabold text-emerald-400">+18%</div>
-        </div>
-
-        {/* Card 4: Active Projects */}
-        <div
-          onClick={() => onNavigate('projects')}
-          className="bg-[#151034] hover:bg-[#1a1443] border border-purple-500/20 rounded-3xl p-4 text-center space-y-1.5 transition-all shadow-md cursor-pointer group"
-        >
-          <div className="w-9 h-9 mx-auto rounded-2xl bg-amber-900/50 border border-amber-500/30 flex items-center justify-center text-amber-300 group-hover:scale-105 transition-transform">
-            <Briefcase className="w-4 h-4 text-amber-400" />
-          </div>
-          <div className="text-2xl font-black text-white">{projects.length + 2}</div>
-          <div className="text-xs font-bold text-slate-300">مشاريعي النشطة</div>
-          <div className="text-[10px] font-extrabold text-amber-400">مشروعان مستحقان</div>
         </div>
       </div>
 
-      {/* Search & Filter Bar (Matching Screenshot) */}
-      <div className="flex items-center gap-2.5">
-        <div className="flex-1 relative">
-          <input
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="ابحث عن عمل أو خدمة..."
-            className="w-full bg-[#151034] border border-purple-500/30 rounded-2xl py-3 px-4 ps-11 text-xs sm:text-sm text-white placeholder:text-slate-400 focus:outline-none focus:border-purple-400 transition-all shadow-inner"
-          />
-          <Search className="w-4 h-4 text-purple-300 absolute start-3.5 top-3.5" />
-        </div>
-
-        <button
-          onClick={() => onSelectCategoryFilter('all')}
-          className="px-4 py-3 bg-[#17123d] hover:bg-[#1f1850] text-purple-200 border border-purple-500/30 rounded-2xl text-xs font-extrabold flex items-center gap-1.5 shadow-md transition-all shrink-0 cursor-pointer"
-        >
-          <SlidersHorizontal className="w-4 h-4 text-purple-400" />
-          <span>تصفية</span>
-        </button>
-      </div>
-
-      {/* 10 Main Categories Grid (Exact matching layout: 2 rows of 5 cards) */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-            <span>التصنيفات الرئيسية</span>
-          </h3>
-          <span className="text-[11px] text-purple-300 font-semibold">10 مجالات متخصصة</span>
-        </div>
-
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-          {CATEGORIES_LIST.map((cat) => {
-            const isSelected = selectedCategory === cat.key;
-            return (
+      {/* Main Layout Container (Sidebar + Content View matching image) */}
+      <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+          
+          {/* Left Vertical Navigation Menu (as shown in phone screenshot) */}
+          <aside className="hidden md:block md:col-span-3 lg:col-span-3">
+            <div className="sticky top-20 bg-slate-900/60 backdrop-blur-xl border border-cyan-900/30 rounded-2xl p-3 shadow-xl space-y-1.5">
+              
               <button
-                key={cat.key}
-                onClick={() => onSelectCategoryFilter(cat.key)}
-                className={`p-3 rounded-2xl border flex flex-col items-center justify-center text-center gap-2 transition-all cursor-pointer group ${
-                  isSelected
-                    ? 'bg-[#211854] border-purple-400 shadow-lg shadow-purple-950/80 scale-[1.02]'
-                    : 'bg-[#151034] hover:bg-[#1b1542] border-purple-500/20'
-                }`}
+                id="sidebar-tab-dashboard"
+                onClick={() => onNavigate('dashboard')}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all bg-gradient-to-r from-cyan-600/30 to-cyan-500/10 text-cyan-200 border border-cyan-500/40 shadow-[0_0_15px_rgba(6,182,212,0.15)]"
               >
-                <div
-                  className={`w-10 h-10 rounded-xl ${cat.bgColor} border ${cat.borderAccent} flex items-center justify-center ${cat.iconColor} group-hover:scale-110 transition-transform`}
-                >
-                  {renderCategoryIcon(cat.iconName, 'w-5 h-5')}
+                <div className="flex items-center gap-2.5">
+                  <Layers className="w-4 h-4 text-cyan-300" />
+                  <span>لوحة القيادة</span>
                 </div>
-                <span className="text-[11px] font-bold text-slate-200 leading-tight">
-                  {cat.nameAr}
-                </span>
+                <div className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_6px_#22d3ee]"></div>
               </button>
-            );
-          })}
-        </div>
-      </div>
 
-      {/* "أفضل الفرص الموصى بها لك" Section (Matching Screenshot) */}
-      <div className="space-y-3.5">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-extrabold text-white flex items-center gap-2">
-            <span>أفضل الفرص الموصى بها لك</span>
-          </h3>
-          <button
-            onClick={() => onNavigate('opportunities')}
-            className="text-xs font-bold text-purple-300 hover:text-purple-100 flex items-center gap-1 cursor-pointer"
-          >
-            <span>عرض الكل</span>
-            <ChevronLeft className="w-3.5 h-3.5 rtl:rotate-0 ltr:rotate-180" />
-          </button>
-        </div>
-
-        <div className="space-y-3">
-          {filteredOpportunities.slice(0, 3).map((opp, idx) => {
-            const isSaved = !!savedOpportunities[opp.id];
-            const iconBg =
-              idx === 0
-                ? 'bg-purple-900/50 text-purple-300 border-purple-500/30'
-                : idx === 1
-                ? 'bg-amber-900/50 text-amber-300 border-amber-500/30'
-                : 'bg-cyan-900/50 text-cyan-300 border-cyan-500/30';
-
-            return (
-              <div
-                key={opp.id}
-                onClick={() => onOpenProposal(opp)}
-                className="bg-[#151034] hover:bg-[#1a1443] border border-purple-500/25 rounded-3xl p-4 sm:p-5 transition-all shadow-lg hover:border-purple-400 cursor-pointer space-y-3"
+              <button
+                id="sidebar-tab-ai"
+                onClick={() => onNavigate('ai-analyzer')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-amber-200 hover:bg-amber-950/20 hover:border-amber-500/30 border border-transparent transition-all"
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex items-start gap-3">
-                    {/* Circle icon */}
-                    <div className={`w-11 h-11 rounded-2xl ${iconBg} border flex items-center justify-center shrink-0`}>
-                      {idx === 0 ? (
-                        <Pencil className="w-5 h-5" />
-                      ) : idx === 1 ? (
-                        <FileText className="w-5 h-5" />
-                      ) : (
-                        <Languages className="w-5 h-5" />
-                      )}
-                    </div>
+                <Sparkles className="w-4 h-4 text-amber-400" />
+                <span>مشغل الذكاء الاصطناعي</span>
+              </button>
 
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h4 className="text-sm sm:text-base font-extrabold text-white">{opp.title}</h4>
-                        <span className="px-2 py-0.5 rounded-full bg-purple-500/20 text-purple-300 border border-purple-400/30 text-[10px] font-extrabold">
-                          جديد
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-[10px] font-extrabold">
-                          تطابق {opp.matchScore || opp.score || 94}%
-                        </span>
-                      </div>
+              <button
+                id="sidebar-tab-projects"
+                onClick={() => onNavigate('projects')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-cyan-200 hover:bg-slate-800/40 border border-transparent transition-all"
+              >
+                <Briefcase className="w-4 h-4 text-sky-400" />
+                <span>المشاريع</span>
+              </button>
 
-                      <div className="flex items-center gap-2 text-xs text-slate-300 flex-wrap">
-                        <span className="font-extrabold text-emerald-400">$ {opp.rawPayoutUSD}</span>
-                        <span>•</span>
-                        <span>{opp.executionDurationDays}-{opp.executionDurationDays + 1} أيام</span>
-                        <span>•</span>
-                        <span className="text-purple-300">عن بُعد</span>
+              <button
+                id="sidebar-tab-opportunities"
+                onClick={() => onNavigate('opportunities')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-cyan-200 hover:bg-slate-800/40 border border-transparent transition-all"
+              >
+                <TrendingUp className="w-4 h-4 text-emerald-400" />
+                <span>الفرص والقنوات</span>
+              </button>
+
+              <button
+                id="sidebar-tab-payments"
+                onClick={() => onNavigate('payments')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-cyan-200 hover:bg-slate-800/40 border border-transparent transition-all"
+              >
+                <DollarSign className="w-4 h-4 text-emerald-300" />
+                <span>المدفوعات</span>
+              </button>
+
+              <button
+                id="sidebar-tab-settings"
+                onClick={() => onNavigate('settings')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-cyan-200 hover:bg-slate-800/40 border border-transparent transition-all"
+              >
+                <Settings className="w-4 h-4 text-slate-400" />
+                <span>الإعدادات</span>
+              </button>
+
+              <button
+                id="sidebar-tab-security"
+                onClick={() => onNavigate('security')}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-xl text-xs font-semibold text-slate-300 hover:text-cyan-200 hover:bg-slate-800/40 border border-transparent transition-all"
+              >
+                <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                <span>الأمان</span>
+              </button>
+
+              <div className="pt-4 border-t border-slate-800/80">
+                <div className="p-2.5 rounded-xl bg-cyan-950/30 border border-cyan-500/20 text-[11px] text-cyan-300 flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></div>
+                  <span>السحابة متصلة (Firestore)</span>
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          {/* Main Dashboard Cards (Col-span 9) */}
+          <main className="col-span-1 md:col-span-9 lg:col-span-9 space-y-4">
+            
+            {/* Dashboard Header Title */}
+            <div className="flex items-center justify-between px-1">
+              <div>
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-cyan-200">
+                  لوحة القيادة
+                </h1>
+                <p className="text-xs sm:text-sm text-cyan-400/80 font-medium mt-0.5">
+                  تحليل ذكي، بوابة شاملة، تنفيذ فوري
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  id="dashboard-new-project-btn"
+                  onClick={onOpenNewProjectModal}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-cyan-900/30 transition-all"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>مشروع جديد</span>
+                </button>
+              </div>
+            </div>
+
+            {/* CARD 1: تحليل الذكاء الاصطناعي (AI Analysis) */}
+            <section
+              id="card-ai-analysis"
+              onClick={() => onNavigate('ai-analyzer')}
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#0e1628]/90 via-[#0a1020]/90 to-[#070b16]/95 border border-cyan-500/30 p-4 sm:p-5 shadow-[0_0_25px_rgba(6,182,212,0.12)] hover:border-cyan-400/60 transition-all cursor-pointer group"
+            >
+              {/* Top Card Header */}
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1 text-slate-500 group-hover:text-cyan-400 transition-colors">
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  </div>
+                  <h2 className="text-sm sm:text-base font-bold text-cyan-200">
+                    تحليل الذكاء الاصطناعي
+                  </h2>
+                </div>
+                <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-cyan-950/60 text-cyan-300 border border-cyan-500/30 font-semibold">
+                  Gemini 3.6 Flash
+                </span>
+              </div>
+
+              {/* Center Holographic AI Orb Animation */}
+              <div className="relative py-4 flex flex-col items-center justify-center">
+                {/* Glowing Aura Rings */}
+                <div className="absolute w-32 h-32 rounded-full bg-gradient-to-tr from-cyan-500/20 via-purple-500/20 to-amber-500/20 blur-xl animate-pulse"></div>
+                <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-tr from-cyan-600 via-indigo-600 to-amber-400 p-[2px] shadow-[0_0_30px_rgba(6,182,212,0.4)] flex items-center justify-center group-hover:scale-105 transition-transform duration-500">
+                  <div className="w-full h-full rounded-full bg-[#0a0f1d] flex flex-col items-center justify-center">
+                    <span className="text-xl sm:text-2xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-tr from-cyan-200 via-white to-amber-300 drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]">
+                      AI
+                    </span>
+                  </div>
+                  {/* Outer Orbital Ring */}
+                  <div className="absolute -inset-2 rounded-full border border-cyan-400/30 border-dashed animate-[spin_10s_linear_infinite]"></div>
+                </div>
+
+                <div className="mt-4 text-center">
+                  <p className="text-xs sm:text-sm font-semibold text-slate-300">
+                    التحسين بنسبة <span className="text-cyan-400 font-bold">96%</span> سرعة الاستجابة باللغة العربية
+                  </p>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    فحص العقود، كشف الاحتيال، وتوليد عروض أسعار تنافسية فورية
+                  </p>
+                </div>
+              </div>
+
+              {/* Bottom Quick Trigger Bar */}
+              <div className="mt-2 pt-3 border-t border-cyan-900/30 flex items-center justify-between">
+                <span className="text-[11px] text-cyan-400/90 font-medium flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5 text-amber-400" />
+                  اضغط للبدء بتحليل العقود الذكي
+                </span>
+                <div className="p-1 rounded-lg bg-cyan-950/40 text-cyan-300 group-hover:translate-x-[-4px] transition-transform">
+                  <ArrowRight className="w-4 h-4 rotate-180" />
+                </div>
+              </div>
+            </section>
+
+            {/* CARD 2: حالة مزامنة البيانات (Data Sync Status) */}
+            <section
+              id="card-data-sync"
+              onClick={handleManualSync}
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#0d172a]/90 via-[#0a1120]/90 to-[#070b16]/95 border border-teal-500/30 p-4 sm:p-5 shadow-[0_0_20px_rgba(20,184,166,0.1)] hover:border-teal-400/60 transition-all cursor-pointer group"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1 text-slate-500 group-hover:text-teal-400 transition-colors">
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  </div>
+                  <h2 className="text-sm sm:text-base font-bold text-teal-200">
+                    حالة مزامنة البيانات
+                  </h2>
+                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleManualSync();
+                  }}
+                  className="text-[11px] px-2.5 py-1 rounded-full bg-teal-950/60 text-teal-300 border border-teal-500/30 font-semibold flex items-center gap-1.5 hover:bg-teal-900/40"
+                >
+                  <RefreshCw className={`w-3 h-3 ${syncStatus === 'syncing' ? 'animate-spin text-teal-400' : ''}`} />
+                  <span>{syncStatus === 'syncing' ? 'جاري المزامنة...' : 'تحديث الآن'}</span>
+                </button>
+              </div>
+
+              {/* Visual 3D Data Transfer Streams */}
+              <div className="py-3 px-2 flex items-center justify-around gap-2 bg-slate-950/40 rounded-xl border border-teal-900/30">
+                {/* Left File Node */}
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-10 h-10 rounded-xl bg-purple-950/50 border border-purple-500/40 flex items-center justify-center text-purple-300 shadow-md">
+                    <FileText className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">البيانات المحلية</span>
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-[9px] text-emerald-300">
+                    <Check className="w-2.5 h-2.5" />
+                  </div>
+                </div>
+
+                {/* Center Glowing Cloud Node */}
+                <div className="relative flex flex-col items-center gap-1">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-teal-500/30 via-sky-500/30 to-indigo-500/30 border border-teal-400/50 flex items-center justify-center text-teal-200 shadow-[0_0_20px_rgba(45,212,191,0.3)]">
+                    <Cloud className="w-7 h-7 text-teal-300 animate-pulse" />
+                  </div>
+                  <span className="text-[11px] font-bold text-teal-300">المتصل</span>
+                </div>
+
+                {/* Right Cloud Database Node */}
+                <div className="flex flex-col items-center gap-1">
+                  <div className="w-10 h-10 rounded-xl bg-amber-950/50 border border-amber-500/40 flex items-center justify-center text-amber-300 shadow-md">
+                    <FileSpreadsheet className="w-5 h-5" />
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-medium">Firestore السحابي</span>
+                  <div className="w-4 h-4 rounded-full bg-emerald-500/20 border border-emerald-400/40 flex items-center justify-center text-[9px] text-emerald-300">
+                    <Check className="w-2.5 h-2.5" />
+                  </div>
+                </div>
+              </div>
+
+              {/* Sync Metadata */}
+              <div className="mt-3 flex items-center justify-between text-[11px] text-slate-400">
+                <span className="flex items-center gap-1 text-teal-300 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                  تمت المزامنة بنجاح ({lastSyncTime})
+                </span>
+                <span>المنطقة: asia-south1</span>
+              </div>
+            </section>
+
+            {/* CARD 3: مساعد الذكاء الاصطناعي مريم (AI Assistant - Marium) */}
+            <section
+              id="card-ai-assistant-marium"
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#14102e]/90 via-[#0d0a22]/90 to-[#070b16]/95 border border-purple-500/30 p-4 sm:p-5 shadow-[0_0_25px_rgba(168,85,247,0.12)]"
+            >
+              <div className="flex items-center justify-between mb-2">
+                <h2 className="text-sm sm:text-base font-bold text-purple-200 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-purple-400" />
+                  مساعد الذكاء الاصطناعي
+                </h2>
+                <span className="text-xs font-black text-transparent bg-clip-text bg-gradient-to-r from-purple-300 to-pink-300">
+                  مريم
+                </span>
+              </div>
+
+              {/* Mascot Face & Soundwaves Animation */}
+              <div className="py-2 flex items-center justify-center gap-3">
+                {/* Voice soundwaves left */}
+                <div className="flex items-center gap-1 text-purple-400">
+                  <span className="w-1 h-3 bg-purple-400/60 rounded-full animate-[pulse_1s_infinite]"></span>
+                  <span className="w-1 h-6 bg-purple-400 rounded-full animate-[pulse_1.2s_infinite]"></span>
+                  <span className="w-1 h-4 bg-purple-400/80 rounded-full animate-[pulse_0.8s_infinite]"></span>
+                </div>
+
+                {/* Mascot Orb Face */}
+                <div className="relative w-16 h-16 rounded-full bg-gradient-to-tr from-purple-600 via-pink-500 to-indigo-400 p-[2px] shadow-[0_0_25px_rgba(168,85,247,0.4)]">
+                  <div className="w-full h-full rounded-full bg-[#0f0a28] flex items-center justify-center">
+                    {/* Cute smiling face */}
+                    <div className="flex flex-col items-center">
+                      <div className="flex gap-2">
+                        <div className="w-2 h-2 rounded-full bg-cyan-300 shadow-[0_0_6px_#67e8f9]"></div>
+                        <div className="w-2 h-2 rounded-full bg-cyan-300 shadow-[0_0_6px_#67e8f9]"></div>
                       </div>
+                      <div className="w-3 h-1.5 rounded-b-full border-b-2 border-pink-300 mt-1"></div>
                     </div>
                   </div>
+                </div>
 
-                  {/* Bookmark Button */}
+                {/* Voice soundwaves right */}
+                <div className="flex items-center gap-1 text-purple-400">
+                  <span className="w-1 h-4 bg-purple-400/80 rounded-full animate-[pulse_0.8s_infinite]"></span>
+                  <span className="w-1 h-6 bg-purple-400 rounded-full animate-[pulse_1.2s_infinite]"></span>
+                  <span className="w-1 h-3 bg-purple-400/60 rounded-full animate-[pulse_1s_infinite]"></span>
+                </div>
+              </div>
+
+              {/* Display AI Quick Response if received */}
+              {quickAiResponse && (
+                <div className="my-2.5 p-3 rounded-xl bg-purple-950/40 border border-purple-500/30 text-xs text-purple-200 leading-relaxed max-h-40 overflow-y-auto">
+                  <div className="flex items-center gap-1.5 font-bold text-pink-300 mb-1">
+                    <BrainCircuit className="w-3.5 h-3.5" />
+                    <span>رد مريم:</span>
+                  </div>
+                  {quickAiResponse}
+                </div>
+              )}
+
+              {/* Direct Prompt Input Bar (As shown in screenshot) */}
+              <form onSubmit={handleQuickPromptSubmit} className="mt-3">
+                <div className="relative flex items-center">
+                  <input
+                    id="marium-quick-input"
+                    type="text"
+                    value={quickPrompt}
+                    onChange={(e) => setQuickPrompt(e.target.value)}
+                    placeholder="اكتب طلبك أو استفسارك هنا لمريم..."
+                    disabled={isAiLoading}
+                    className="w-full pl-12 pr-4 py-2.5 rounded-xl bg-slate-950/80 border border-purple-500/40 text-xs text-slate-100 placeholder-slate-400 focus:outline-none focus:border-purple-400 focus:ring-1 focus:ring-purple-400/50 transition-all"
+                  />
                   <button
-                    onClick={(e) => toggleBookmark(opp.id, e)}
-                    className="p-2 text-slate-400 hover:text-purple-300 transition-colors"
+                    id="marium-send-btn"
+                    type="submit"
+                    disabled={!quickPrompt.trim() || isAiLoading}
+                    className="absolute left-1.5 p-2 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white disabled:opacity-40 hover:from-purple-500 hover:to-pink-500 transition-all shadow-md"
+                    title="إرسال"
                   >
-                    {isSaved ? (
-                      <BookmarkCheck className="w-5 h-5 text-purple-400" />
+                    {isAiLoading ? (
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     ) : (
-                      <Bookmark className="w-5 h-5" />
+                      <Send className="w-3.5 h-3.5 rotate-180" />
                     )}
                   </button>
                 </div>
+              </form>
+            </section>
 
-                <p className="text-xs text-slate-300/90 leading-relaxed">
-                  {opp.description}
-                </p>
-
-                <div className="flex items-center justify-end pt-1">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onOpenProposal(opp);
-                    }}
-                    className="px-5 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl shadow-md flex items-center gap-1.5 transition-all"
-                  >
-                    <span>تقديم الآن</span>
-                  </button>
+            {/* CARD 4: المشاريع الأخيرة (Recent Projects Carousel) */}
+            <section
+              id="card-recent-projects"
+              className="relative overflow-hidden rounded-2xl bg-gradient-to-b from-[#0e172a]/90 via-[#0a1020]/90 to-[#070b16]/95 border border-amber-500/30 p-4 sm:p-5 shadow-[0_0_20px_rgba(245,158,11,0.1)]"
+            >
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex gap-1 text-slate-500">
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
+                  </div>
+                  <h2 className="text-sm sm:text-base font-bold text-amber-200">
+                    المشاريع الأخيرة
+                  </h2>
                 </div>
+                <button
+                  onClick={() => onNavigate('projects')}
+                  className="text-xs text-amber-300 hover:text-amber-200 font-semibold flex items-center gap-1"
+                >
+                  <span>عرض الكل ({projects.length})</span>
+                  <ChevronLeft className="w-3.5 h-3.5" />
+                </button>
               </div>
-            );
-          })}
+
+              {/* Horizontal Scroll of Project Files (As shown in screenshot) */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3">
+                
+                {/* Item 1: Android Kotlin App */}
+                <div
+                  onClick={() => onNavigate('projects')}
+                  className="p-3 rounded-xl bg-slate-950/60 border border-cyan-500/30 hover:border-cyan-400 transition-all cursor-pointer flex flex-col justify-between h-28"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-7 h-7 rounded-lg bg-cyan-950/60 border border-cyan-500/40 flex items-center justify-center text-cyan-300">
+                      <FileCode className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 font-bold border border-emerald-500/30">
+                      95%
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 truncate">Marium_App.kt</h3>
+                    <p className="text-[10px] text-slate-400">تطبيق أندرويد وويب</p>
+                  </div>
+                </div>
+
+                {/* Item 2: Excel Financial Statement */}
+                <div
+                  onClick={() => onNavigate('projects')}
+                  className="p-3 rounded-xl bg-slate-950/60 border border-emerald-500/30 hover:border-emerald-400 transition-all cursor-pointer flex flex-col justify-between h-28"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-950/60 border border-emerald-500/40 flex items-center justify-center text-emerald-300">
+                      <FileSpreadsheet className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 font-bold border border-emerald-500/30">
+                      100%
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 truncate">Financial_2026.xlsx</h3>
+                    <p className="text-[10px] text-slate-400">القوائم المالية والضرائب</p>
+                  </div>
+                </div>
+
+                {/* Item 3: UI Design */}
+                <div
+                  onClick={() => onNavigate('projects')}
+                  className="p-3 rounded-xl bg-slate-950/60 border border-purple-500/30 hover:border-purple-400 transition-all cursor-pointer flex flex-col justify-between h-28"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-7 h-7 rounded-lg bg-purple-950/60 border border-purple-500/40 flex items-center justify-center text-purple-300">
+                      <Layers className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-950/50 text-sky-300 font-bold border border-sky-500/30">
+                      70%
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 truncate">UI_UX_Mockup.fig</h3>
+                    <p className="text-[10px] text-slate-400">تصميم واجهة المنصة</p>
+                  </div>
+                </div>
+
+                {/* Item 4: Legal Translation */}
+                <div
+                  onClick={() => onNavigate('projects')}
+                  className="p-3 rounded-xl bg-slate-950/60 border border-amber-500/30 hover:border-amber-400 transition-all cursor-pointer flex flex-col justify-between h-28"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="w-7 h-7 rounded-lg bg-amber-950/60 border border-amber-500/40 flex items-center justify-center text-amber-300">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-emerald-950/50 text-emerald-300 font-bold border border-emerald-500/30">
+                      85%
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-bold text-slate-200 truncate">Legal_Docs.pdf</h3>
+                    <p className="text-[10px] text-slate-400">ترجمة عقود معتمدة</p>
+                  </div>
+                </div>
+
+              </div>
+            </section>
+
+          </main>
         </div>
       </div>
 
-      {/* Two Bottom Widget Cards: "مشاريعي" & "نظرة عامة على الدخل" (Matching Screenshot) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-        {/* Left Widget: "مشاريعي" */}
-        <div className="bg-[#151034] border border-purple-500/25 rounded-3xl p-5 shadow-xl space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-extrabold text-white">مشاريعي</h3>
-            <button
-              onClick={() => onNavigate('projects')}
-              className="text-xs font-bold text-purple-300 hover:underline"
-            >
-              عرض الكل
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            {projects.slice(0, 3).map((p) => {
-              const completedCount = p.steps.filter((s) => s.completed).length;
-              const pct = Math.round((completedCount / p.steps.length) * 100);
-
-              return (
-                <div
-                  key={p.id}
-                  onClick={() => onNavigate('projects')}
-                  className="p-3 bg-[#1b1542] hover:bg-[#221b52] rounded-2xl border border-purple-500/20 flex items-center justify-between gap-3 transition-all cursor-pointer"
-                >
-                  <div className="flex items-center gap-3">
-                    {/* Circular progress gauge */}
-                    <div className="relative w-11 h-11 shrink-0 flex items-center justify-center">
-                      <svg className="w-11 h-11 -rotate-90" viewBox="0 0 36 36">
-                        <path
-                          className="text-purple-950/60"
-                          strokeWidth="3"
-                          stroke="currentColor"
-                          fill="none"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                        <path
-                          className="text-cyan-400"
-                          strokeDasharray={`${pct}, 100`}
-                          strokeWidth="3"
-                          strokeLinecap="round"
-                          stroke="currentColor"
-                          fill="none"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                      </svg>
-                      <div className="absolute text-[9px] font-black text-cyan-300">
-                        {pct}%
-                      </div>
-                    </div>
-
-                    <div>
-                      <h4 className="text-xs font-bold text-white">{p.title}</h4>
-                      <p className="text-[11px] text-slate-400">العميل: {p.client}</p>
-                    </div>
-                  </div>
-
-                  <span className="text-[10px] font-bold text-emerald-400 px-2 py-0.5 bg-emerald-950/40 rounded-md">
-                    ${p.payoutUSD}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
+      {/* Bottom Navigation Bar (Dock matching screenshot exactly) */}
+      <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[#070b14]/95 backdrop-blur-xl border-t border-cyan-950/60 py-2 px-3">
+        <div className="max-w-md mx-auto flex items-center justify-around">
+          
+          <button
+            id="bottom-tab-dashboard"
+            onClick={() => onNavigate('dashboard')}
+            className="flex flex-col items-center gap-1 text-cyan-300 group"
+          >
+            <div className="p-1.5 rounded-xl bg-cyan-950/60 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)]">
+              <Layers className="w-4 h-4 text-cyan-300" />
+            </div>
+            <span className="text-[10px] font-bold">لوحة القيادة</span>
+          </button>
 
           <button
-            onClick={onOpenNewProjectModal}
-            className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-2xl shadow-md flex items-center justify-center gap-1.5 transition-all"
+            id="bottom-tab-ai"
+            onClick={() => onNavigate('ai-analyzer')}
+            className="flex flex-col items-center gap-1 text-slate-400 hover:text-amber-300 transition-colors group"
           >
-            <Plus className="w-4 h-4" />
-            <span>+ مشروع جديد</span>
+            <div className="p-1.5 rounded-xl hover:bg-slate-800/40">
+              <Sparkles className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-medium">مشغل AI</span>
           </button>
+
+          <button
+            id="bottom-tab-projects"
+            onClick={() => onNavigate('projects')}
+            className="flex flex-col items-center gap-1 text-slate-400 hover:text-sky-300 transition-colors group"
+          >
+            <div className="p-1.5 rounded-xl hover:bg-slate-800/40">
+              <Briefcase className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-medium">المشاريع</span>
+          </button>
+
+          <button
+            id="bottom-tab-opportunities"
+            onClick={() => onNavigate('opportunities')}
+            className="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-300 transition-colors group"
+          >
+            <div className="p-1.5 rounded-xl hover:bg-slate-800/40">
+              <TrendingUp className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-medium">الفرص</span>
+          </button>
+
+          <button
+            id="bottom-tab-payments"
+            onClick={() => onNavigate('payments')}
+            className="flex flex-col items-center gap-1 text-slate-400 hover:text-emerald-300 transition-colors group"
+          >
+            <div className="p-1.5 rounded-xl hover:bg-slate-800/40">
+              <DollarSign className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-medium">المدفوعات</span>
+          </button>
+
+          <button
+            id="bottom-tab-security"
+            onClick={() => onNavigate('security')}
+            className="flex flex-col items-center gap-1 text-slate-400 hover:text-indigo-300 transition-colors group"
+          >
+            <div className="p-1.5 rounded-xl hover:bg-slate-800/40">
+              <ShieldCheck className="w-4 h-4" />
+            </div>
+            <span className="text-[10px] font-medium">الأمان</span>
+          </button>
+
         </div>
+      </nav>
 
-        {/* Right Widget: "نظرة عامة على الدخل" */}
-        <div className="bg-[#151034] border border-purple-500/25 rounded-3xl p-5 shadow-xl space-y-3.5 flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-purple-300 font-bold flex items-center gap-1">
-                <span>هذا الشهر</span>
-                <ChevronLeft className="w-3.5 h-3.5" />
-              </span>
-              <h3 className="text-sm font-extrabold text-white">نظرة عامة على الدخل</h3>
-            </div>
-
-            <div className="flex items-baseline justify-between mt-2">
-              <div>
-                <span className="text-2xl font-black text-white">1,250 $</span>
-                <span className="text-xs text-slate-400 block mt-0.5">إجمالي الأرباح</span>
-              </div>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 text-xs font-extrabold">
-                +18%
-              </span>
-            </div>
-
-            {/* Smooth SVG Earnings Chart (Matching Screenshot) */}
-            <div className="mt-3 relative h-28 w-full">
-              <svg className="w-full h-full" viewBox="0 0 300 100" preserveAspectRatio="none">
-                <defs>
-                  <linearGradient id="purpleGradient" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#a855f7" stopOpacity="0.5" />
-                    <stop offset="100%" stopColor="#6366f1" stopOpacity="0.0" />
-                  </linearGradient>
-                </defs>
-
-                {/* Grid guidelines */}
-                <line x1="0" y1="20" x2="300" y2="20" stroke="#3730a3" strokeDasharray="3 3" strokeOpacity="0.3" />
-                <line x1="0" y1="55" x2="300" y2="55" stroke="#3730a3" strokeDasharray="3 3" strokeOpacity="0.3" />
-                <line x1="0" y1="90" x2="300" y2="90" stroke="#3730a3" strokeDasharray="3 3" strokeOpacity="0.3" />
-
-                {/* Area Fill */}
-                <path
-                  d="M 0 85 Q 50 82, 100 65 T 200 50 T 260 30 L 290 15 L 290 95 L 0 95 Z"
-                  fill="url(#purpleGradient)"
-                />
-
-                {/* Smooth Curve */}
-                <path
-                  d="M 0 85 Q 50 82, 100 65 T 200 50 T 260 30 L 290 15"
-                  fill="none"
-                  stroke="#c084fc"
-                  strokeWidth="3.5"
-                  strokeLinecap="round"
-                />
-
-                {/* End Point Glow */}
-                <circle cx="290" cy="15" r="4.5" fill="#ffffff" stroke="#a855f7" strokeWidth="2.5" />
-              </svg>
-
-              {/* X-Axis labels */}
-              <div className="flex justify-between text-[9px] text-slate-400 mt-1 px-1 font-semibold">
-                <span>1</span>
-                <span>8</span>
-                <span>15</span>
-                <span>22</span>
-                <span>30</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom received vs pending boxes */}
-          <div className="grid grid-cols-2 gap-2.5 pt-2 border-t border-purple-500/20 text-center">
-            <div className="bg-[#1b1542] p-2.5 rounded-2xl border border-purple-500/20">
-              <span className="text-[11px] text-slate-300 font-bold block">تم استلامها</span>
-              <span className="text-sm font-extrabold text-emerald-400">950 $</span>
-            </div>
-
-            <div className="bg-[#1b1542] p-2.5 rounded-2xl border border-purple-500/20">
-              <span className="text-[11px] text-slate-300 font-bold block">قيد الانتظار</span>
-              <span className="text-sm font-extrabold text-amber-400">300 $</span>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 };

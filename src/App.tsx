@@ -30,13 +30,45 @@ import { PaymentView } from './components/PaymentView';
 import { SettingsView } from './components/SettingsView';
 import { ProposalModal } from './components/ProposalModal';
 import { AIAssistantModal } from './components/AIAssistantModal';
-import { Plus, X, Briefcase, DollarSign } from 'lucide-react';
+import { Plus, X, Briefcase, DollarSign, CheckCircle2 } from 'lucide-react';
+
+// Firebase imports
+import {
+  auth,
+  onAuthStateChanged,
+  loginWithGoogle,
+  logoutUser,
+  testFirebaseConnection,
+  User,
+  firebaseConfig
+} from './lib/firebase';
+import {
+  subscribeToOpportunities,
+  subscribeToProjects,
+  subscribeToPaymentMethods,
+  subscribeToTransactions,
+  subscribeToSyncLogs,
+  saveOpportunity,
+  updateOpportunityStatusInCloud,
+  saveProject,
+  updateProjectInCloud,
+  savePaymentMethod,
+  saveTransaction,
+  saveSyncLog,
+  syncAllToCloud
+} from './lib/firestoreService';
 
 export function App() {
   const [language, setLanguage] = useState<Language>('ar');
   const [workMode, setWorkMode] = useState<WorkMode>('hybrid');
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
 
+  // Firebase User Auth State
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [firebaseConnected, setFirebaseConnected] = useState<boolean>(false);
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
+
+  // App Data State
   const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
   const [projects, setProjects] = useState<ActiveProject[]>(initialActiveProjects);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods);
@@ -46,6 +78,7 @@ export function App() {
 
   const [selectedCategory, setSelectedCategory] = useState<OpportunityCategory | 'all'>('all');
   const [isSyncing, setIsSyncing] = useState(false);
+  const [syncNotification, setSyncNotification] = useState<string | null>(null);
 
   // Modals state
   const [proposalOpp, setProposalOpp] = useState<Opportunity | null>(null);
@@ -65,9 +98,131 @@ export function App() {
     document.documentElement.lang = language;
   }, [language]);
 
+  // Test Firebase connection & monitor Auth state
+  useEffect(() => {
+    testFirebaseConnection().then((connected) => {
+      setFirebaseConnected(connected);
+    });
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+      setAuthLoading(false);
+      if (user) {
+        setSyncNotification(language === 'ar' ? `مرحباً ${user.displayName || 'بك'}، تم الاتصال بـ Firebase` : `Welcome, connected to Firebase`);
+        setTimeout(() => setSyncNotification(null), 4000);
+      }
+    });
+
+    return () => unsubscribeAuth();
+  }, [language]);
+
+  // Real-time Firestore Subscriptions when user is authenticated
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const uid = currentUser.uid;
+
+    const unSubOpp = subscribeToOpportunities(uid, (data) => {
+      if (data.length > 0) {
+        setOpportunities(data);
+      }
+    });
+
+    const unSubProj = subscribeToProjects(uid, (data) => {
+      if (data.length > 0) {
+        setProjects(data);
+      }
+    });
+
+    const unSubPm = subscribeToPaymentMethods(uid, (data) => {
+      if (data.length > 0) {
+        setPaymentMethods(data);
+      }
+    });
+
+    const unSubTx = subscribeToTransactions(uid, (data) => {
+      if (data.length > 0) {
+        setTransactions(data);
+      }
+    });
+
+    const unSubLogs = subscribeToSyncLogs(uid, (data) => {
+      if (data.length > 0) {
+        setSyncLogs(data);
+      }
+    });
+
+    return () => {
+      if (unSubOpp) unSubOpp();
+      if (unSubProj) unSubProj();
+      if (unSubPm) unSubPm();
+      if (unSubTx) unSubTx();
+      if (unSubLogs) unSubLogs();
+    };
+  }, [currentUser]);
+
+  // Handle Login & Logout
+  const handleLogin = async () => {
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      console.error('Login failed:', err);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+      setOpportunities(initialOpportunities);
+      setProjects(initialActiveProjects);
+      setPaymentMethods(initialPaymentMethods);
+      setTransactions(initialTransactions);
+      setSyncLogs(initialSyncLogs);
+    } catch (err) {
+      console.error('Logout failed:', err);
+    }
+  };
+
+  // Upload and synchronize all local data to Cloud Firestore
+  const handleUploadAllToCloud = async () => {
+    if (!currentUser) {
+      handleLogin();
+      return;
+    }
+
+    setIsSyncing(true);
+    try {
+      const count = await syncAllToCloud(currentUser.uid, {
+        opportunities,
+        projects,
+        paymentMethods,
+        transactions,
+      });
+
+      const newLog: SyncLog = {
+        id: `sync-${Date.now()}`,
+        timestamp: new Date().toLocaleTimeString(),
+        type: 'sync',
+        mode: workMode,
+        status: 'success',
+        size: `${count} records`,
+        details: `Firebase Firestore synchronized successfully in ${firebaseConfig.projectId}`,
+      };
+
+      await saveSyncLog(currentUser.uid, newLog);
+      setSyncLogs((prev) => [newLog, ...prev]);
+      setSyncNotification(language === 'ar' ? 'تمت مزامنة جميع البيانات مع سحابة Firebase بنجاح!' : 'All data synced with Firebase Cloud successfully!');
+      setTimeout(() => setSyncNotification(null), 4000);
+    } catch (err) {
+      console.error('Bulk sync failed:', err);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   const handleTriggerSync = () => {
     setIsSyncing(true);
-    setTimeout(() => {
+    setTimeout(async () => {
       setIsSyncing(false);
       const newLog: SyncLog = {
         id: `sync-${Date.now()}`,
@@ -76,32 +231,70 @@ export function App() {
         mode: workMode,
         status: 'success',
         size: `${opportunities.length + projects.length} records`,
-        details: 'Firebase snapshot uploaded and synchronized successfully',
+        details: 'Firebase snapshot updated and synchronized successfully',
       };
+
+      if (currentUser) {
+        try {
+          await saveSyncLog(currentUser.uid, newLog);
+        } catch (e) {
+          console.error(e);
+        }
+      }
       setSyncLogs((prev) => [newLog, ...prev]);
-    }, 1200);
+      setSyncNotification(language === 'ar' ? 'اكتملت المزامنة السحابية' : 'Cloud sync completed');
+      setTimeout(() => setSyncNotification(null), 3000);
+    }, 1000);
   };
 
-  const handleAddOpportunity = (newOpp: Opportunity) => {
+  const handleAddOpportunity = async (newOpp: Opportunity) => {
     setOpportunities([newOpp, ...opportunities]);
+    if (currentUser) {
+      try {
+        await saveOpportunity(currentUser.uid, newOpp);
+      } catch (err) {
+        console.error('Firestore save failed:', err);
+      }
+    }
   };
 
-  const handleUpdateOpportunityStatus = (id: string, status: OpportunityStatus) => {
+  const handleUpdateOpportunityStatus = async (id: string, status: OpportunityStatus) => {
     setOpportunities((prev) =>
       prev.map((opp) => (opp.id === id ? { ...opp, status } : opp))
     );
+    if (currentUser) {
+      try {
+        await updateOpportunityStatusInCloud(currentUser.uid, id, status);
+      } catch (err) {
+        console.error('Firestore status update failed:', err);
+      }
+    }
   };
 
-  const handleAddPaymentMethod = (newPm: PaymentMethod) => {
+  const handleAddPaymentMethod = async (newPm: PaymentMethod) => {
     setPaymentMethods([newPm, ...paymentMethods]);
+    if (currentUser) {
+      try {
+        await savePaymentMethod(currentUser.uid, newPm);
+      } catch (err) {
+        console.error('Firestore save payment failed:', err);
+      }
+    }
   };
 
-  const handleAddSyncLog = (newLog: SyncLog) => {
+  const handleAddSyncLog = async (newLog: SyncLog) => {
     setSyncLogs([newLog, ...syncLogs]);
+    if (currentUser) {
+      try {
+        await saveSyncLog(currentUser.uid, newLog);
+      } catch (err) {
+        console.error('Firestore save log failed:', err);
+      }
+    }
   };
 
   // Convert an accepted opportunity directly to an active project
-  const handleSubmitApplication = (oppId: string, customPrice: number) => {
+  const handleSubmitApplication = async (oppId: string, customPrice: number) => {
     const targetOpp = opportunities.find((o) => o.id === oppId);
     if (!targetOpp) return;
 
@@ -126,22 +319,45 @@ export function App() {
 
     setProjects((prev) => [newProject, ...prev]);
     handleUpdateOpportunityStatus(oppId, 'accepted');
+
+    if (currentUser) {
+      try {
+        await saveProject(currentUser.uid, newProject);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     setActiveTab('projects');
   };
 
-  const handleUpdateProjectProgress = (projectId: string, stepId: string) => {
+  const handleUpdateProjectProgress = async (projectId: string, stepId: string) => {
+    let updatedProject: ActiveProject | undefined;
     setProjects((prev) =>
       prev.map((p) => {
         if (p.id !== projectId) return p;
         const updatedSteps = p.steps.map((s) => (s.id === stepId ? { ...s, completed: !s.completed } : s));
         const completedCount = updatedSteps.filter((s) => s.completed).length;
         const progress = Math.round((completedCount / updatedSteps.length) * 100);
-        return { ...p, steps: updatedSteps, progress };
+        const res = { ...p, steps: updatedSteps, progress };
+        updatedProject = res;
+        return res;
       })
     );
+
+    if (currentUser && updatedProject) {
+      try {
+        await updateProjectInCloud(currentUser.uid, projectId, {
+          steps: (updatedProject as ActiveProject).steps,
+          progress: (updatedProject as ActiveProject).progress,
+        });
+      } catch (e) {
+        console.error(e);
+      }
+    }
   };
 
-  const handleDeliverProject = (projectId: string) => {
+  const handleDeliverProject = async (projectId: string) => {
     const proj = projects.find((p) => p.id === projectId);
     if (!proj) return;
 
@@ -151,29 +367,35 @@ export function App() {
       prev.map((pm, idx) => (idx === 0 ? { ...pm, balance: pm.balance + payout } : pm))
     );
 
-    // Add transaction record
-    setTransactions((prev) => [
-      {
-        id: `tx-${Date.now()}`,
-        amount: payout,
-        currency: 'USD',
-        description: `استلام أرباح إنجاز مشروع: ${proj.title}`,
-        date: new Date().toISOString().split('T')[0],
-        status: 'completed',
-        type: 'payout',
-      },
-      ...prev,
-    ]);
+    const newTx = {
+      id: `tx-${Date.now()}`,
+      amount: payout,
+      currency: 'USD',
+      description: `استلام أرباح إنجاز مشروع: ${proj.title}`,
+      date: new Date().toISOString().split('T')[0],
+      status: 'completed' as const,
+      type: 'payout' as const,
+    };
 
-    // Mark project complete or remove
+    setTransactions((prev) => [newTx, ...prev]);
+
     setProjects((prev) =>
       prev.map((p) => (p.id === projectId ? { ...p, status: 'paid', progress: 100 } : p))
     );
 
+    if (currentUser) {
+      try {
+        await updateProjectInCloud(currentUser.uid, projectId, { status: 'paid', progress: 100 });
+        await saveTransaction(currentUser.uid, newTx);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     setActiveTab('payments');
   };
 
-  const handleCreateNewProject = (e: React.FormEvent) => {
+  const handleCreateNewProject = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newProjectTitle) return;
 
@@ -200,11 +422,28 @@ export function App() {
     setNewProjectTitle('');
     setNewProjectClient('');
     setNewProjectDescription('');
+
+    if (currentUser) {
+      try {
+        await saveProject(currentUser.uid, newProj);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
     setActiveTab('projects');
   };
 
   return (
     <div className="min-h-screen bg-[#0a071f] text-slate-100 flex flex-col font-sans selection:bg-purple-500 selection:text-white">
+      {/* Sync Toast Notification */}
+      {syncNotification && (
+        <div className="fixed bottom-16 sm:bottom-6 right-6 z-50 bg-purple-900 border border-purple-400/50 text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-bounce">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{syncNotification}</span>
+        </div>
+      )}
+
       {/* Top Header Bar */}
       <Header
         language={language}
@@ -213,6 +452,9 @@ export function App() {
         onWorkModeChange={setWorkMode}
         isSyncing={isSyncing}
         onTriggerSync={handleTriggerSync}
+        currentUser={currentUser}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
       />
 
       {/* Top Desktop & Bottom Mobile Navigation Bar */}
@@ -286,6 +528,8 @@ export function App() {
             onAddSyncLog={handleAddSyncLog}
             isSyncing={isSyncing}
             onTriggerSync={handleTriggerSync}
+            currentUser={currentUser}
+            onUploadAllToCloud={handleUploadAllToCloud}
           />
         )}
 
@@ -433,14 +677,14 @@ export function App() {
       <footer className="bg-[#0a071f] border-t border-purple-500/20 py-5 px-4 text-center text-xs text-purple-200/60 font-medium mb-12 sm:mb-0">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
-            © 2026 <strong className="text-white">مريم AI</strong> • مساحة العمل عن بُعد المكتملة
+            © 2026 <strong className="text-white">مريم AI</strong> • مساحة العمل السحابية المكتملة
           </div>
           <div className="flex items-center gap-3">
-            <span>Gemini 3.6 Flash</span>
+            <span>Firebase Firestore ({firebaseConfig.projectId})</span>
             <span>•</span>
-            <span>Firebase CloudSync</span>
+            <span>asia-south1</span>
             <span>•</span>
-            <span>Android Keystore Integrity</span>
+            <span>Android Keystore Secured</span>
           </div>
         </div>
       </footer>
