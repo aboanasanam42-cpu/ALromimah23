@@ -16,3 +16,5 @@ app/key.properties
 app/*.jks
 app/*.keystore
 app/release-upload.jks
+build-output/
+run_logs.zip
