@@ -25,18 +25,21 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.marium.aiworkspace.ai.analyzer.AIAnalyzer
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AIAnalysisScreen(navController: NavController) {
     var prompt by rememberSaveable { mutableStateOf("") }
     var result by rememberSaveable { mutableStateOf("Enter text to start the AI analysis flow.") }
+    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
     Scaffold(
@@ -85,12 +88,15 @@ fun AIAnalysisScreen(navController: NavController) {
             ) {
                 Button(
                     onClick = {
-                        result = if (prompt.isBlank()) {
-                            "Please add some text to analyze."
+                        if (prompt.isBlank()) {
+                            result = "Please add some text to analyze."
                         } else {
-                            AIAnalyzer().analyzeText(prompt)
-                                .takeIf { it.isNotBlank() }
-                                ?: "Analysis preview ready for: ${prompt.take(80)}${if (prompt.length > 80) "..." else ""}"
+                            coroutineScope.launch {
+                                result = "Analyzing..."
+                                val res = AIAnalyzer().analyzeText(prompt)
+                                result = res.getOrNull()?.summary
+                                    ?: "Analysis preview ready for: ${prompt.take(80)}${if (prompt.length > 80) "..." else ""}"
+                            }
                         }
                     }
                 ) {
