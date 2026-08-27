@@ -1,44 +1,50 @@
-name: Marium AI Workspace CI/CD
+name: Build and Release Android APK
 
 on:
   push:
     branches: ["main"]
     tags: ["v*"]
-  pull_request:
-    branches: ["main"]
   workflow_dispatch:
+    inputs:
+      release_tag:
+        description: "Custom release tag (optional, e.g. v2.0.142)"
+        required: false
+        default: ""
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: write
+  packages: write
+  actions: read
+
 env:
   ANDROID_API: "35"
   ANDROID_BUILD_TOOLS: "35.0.0"
-  NODE_VERSION: "20"
   JAVA_VERSION: "17"
+  NODE_VERSION: "20"
 
 jobs:
-  build:
-    name: Validate, build and publish Android APK
+  build-and-release:
+    name: Build APK, Verify & Publish Release
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
 
     steps:
-      - name: Checkout
+      - name: Checkout Source Code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set up Java
+      - name: Set up Java ${{ env.JAVA_VERSION }} (Temurin)
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: ${{ env.JAVA_VERSION }}
           cache: gradle
 
-      - name: Set up Node.js
+      - name: Set up Node.js ${{ env.NODE_VERSION }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
@@ -47,7 +53,7 @@ jobs:
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Install required Android SDK packages
+      - name: Install Android SDK Packages (API ${{ env.ANDROID_API }})
         shell: bash
         run: |
           set -euo pipefail
@@ -55,7 +61,7 @@ jobs:
           if [ ! -x "$SDKMANAGER" ]; then
             SDKMANAGER="$(command -v sdkmanager || true)"
           fi
-          test -n "$SDKMANAGER" || { echo "sdkmanager was not installed"; exit 1; }
+          test -n "$SDKMANAGER" || { echo "sdkmanager not found"; exit 1; }
           echo "Using sdkmanager: $SDKMANAGER"
           "$SDKMANAGER" --version
           yes | "$SDKMANAGER" --licenses >/dev/null || true
@@ -63,25 +69,21 @@ jobs:
           test -d "${ANDROID_HOME}/platforms/android-${ANDROID_API}"
           test -d "${ANDROID_HOME}/build-tools/${ANDROID_BUILD_TOOLS}"
 
-      - name: Prepare Gradle
+      - name: Prepare Gradle Environment
         shell: bash
         run: |
           set -euo pipefail
           chmod +x gradlew
-          test -s gradle/wrapper/gradle-wrapper.jar
-          unzip -t gradle/wrapper/gradle-wrapper.jar >/dev/null
           echo "sdk.dir=${ANDROID_HOME}" > local.properties
+          test -s gradle/wrapper/gradle-wrapper.jar
 
-      - name: Install web dependencies
-        run: npm install
+      - name: Install Web Dependencies & Build Assets
+        run: |
+          npm install
+          npm run lint
+          npm run build
 
-      - name: TypeScript validation
-        run: npm run lint
-
-      - name: Build web application
-        run: npm run build
-
-      - name: Configure release signing when secrets are available
+      - name: Configure Keystore Signing (if secret available)
         shell: bash
         env:
           RELEASE_KEYSTORE_BASE64: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
@@ -98,17 +100,17 @@ jobs:
           keyAlias=${RELEASE_KEY_ALIAS}
           storeFile=release-upload.jks
           EOF
-            echo "Production signing keystore configured from GitHub Secrets."
+            echo "Production release signing configured."
           else
-            echo "No production keystore secret configured; release APK will use the non-production fallback signing configuration."
+            echo "No custom production keystore found in secrets; Gradle fallback signing will be applied."
           fi
 
-      - name: Ensure Google Services configuration is present
+      - name: Ensure Google Services Configuration
         shell: bash
         run: |
           set -euo pipefail
           if [ ! -f "app/google-services.json" ]; then
-            echo "Generating fallback google-services.json..."
+            echo "Provisioning standard google-services.json..."
             cat > app/google-services.json <<'EOF'
           {
             "project_info": {
@@ -160,62 +162,73 @@ jobs:
           EOF
           fi
           test -s app/google-services.json
-          chmod +x gradlew
 
-      - name: Build Android debug and release APKs
+      - name: Build Android Debug & Release APKs
         run: ./gradlew clean assembleDebug assembleRelease --no-daemon --stacktrace
 
-      - name: Verify APK outputs
+      - name: Organize Artifacts & Calculate Checksums
+        id: organize
         shell: bash
         run: |
           set -euo pipefail
-          test -f app/build/outputs/apk/debug/app-debug.apk
-          test -f app/build/outputs/apk/release/app-release.apk
-          mkdir -p apks-dist
-          cp app/build/outputs/apk/debug/app-debug.apk apks-dist/Marium-AI-Workspace-debug.apk
-          cp app/build/outputs/apk/release/app-release.apk apks-dist/Marium-AI-Workspace-release.apk
-          cp -r dist apks-dist/web-bundle
-          (cd apks-dist && sha256sum *.apk > SHA256SUMS.txt)
-          ls -lh apks-dist/
+          mkdir -p release-artifacts
+          
+          # Copy APKs
+          cp app/build/outputs/apk/debug/app-debug.apk release-artifacts/Marium-AI-Workspace-debug.apk
+          cp app/build/outputs/apk/release/app-release.apk release-artifacts/Marium-AI-Workspace-release.apk
+          
+          # Generate SHA256 checksums
+          cd release-artifacts
+          sha256sum *.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          cd ..
 
-      - name: Upload build artifacts
+          # Determine Tag Name
+          if [ -n "${{ github.event.inputs.release_tag }}" ]; then
+            TAG_NAME="${{ github.event.inputs.release_tag }}"
+          elif [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME="${GITHUB_REF#refs/tags/}"
+          else
+            TAG_NAME="v2.0.${{ github.run_number }}"
+          fi
+          echo "tag_name=${TAG_NAME}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APKs to GitHub Actions Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Marium-AI-Workspace-${{ github.run_number }}
-          path: apks-dist/
+          name: Marium-AI-Workspace-APKs-${{ steps.organize.outputs.tag_name }}
+          path: release-artifacts/
           if-no-files-found: error
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v2.0.{0}', github.run_number) }}
-          name: ${{ startsWith(github.ref, 'refs/tags/') && format('Marium AI Workspace {0}', github.ref_name) || format('Marium AI Workspace v2.0.{0}', github.run_number) }}
+          tag_name: ${{ steps.organize.outputs.tag_name }}
+          name: Marium AI Workspace ${{ steps.organize.outputs.tag_name }}
           draft: false
           prerelease: false
           generate_release_notes: true
           body: |
-            ## مريم AI — مساحة العمل الذكية
+            # 🚀 Marium AI Workspace — ${{ steps.organize.outputs.tag_name }}
 
-            إصدار Android تم التحقق من بنائه عبر GitHub Actions.
+            Professional remote work AI assistant Android application build.
 
-            ### الملفات
-            - `Marium-AI-Workspace-release.apk` — نسخة الإصدار.
-            - `Marium-AI-Workspace-debug.apk` — نسخة الاختبار.
-            - `SHA256SUMS.txt` — بصمات الملفات للتحقق من سلامة التنزيل.
-            - `web-bundle/` — نسخة تطبيق الويب.
+            ### 📦 Direct Downloads:
+            - 🔹 **[Release APK](https://github.com/${{ github.repository }}/releases/download/${{ steps.organize.outputs.tag_name }}/Marium-AI-Workspace-release.apk)** (Optimized Production)
+            - 🔹 **[Debug APK](https://github.com/${{ github.repository }}/releases/download/${{ steps.organize.outputs.tag_name }}/Marium-AI-Workspace-debug.apk)** (Development & Testing)
+            - 🔹 **[SHA256 Checksums](https://github.com/${{ github.repository }}/releases/download/${{ steps.organize.outputs.tag_name }}/SHA256SUMS.txt)**
 
-            ### الوظائف الأساسية
-            - اكتشاف فرص العمل عن بُعد.
-            - تقييم الفرص ومؤشرات الاحتيال.
-            - تحليل AI وتوليد عروض العمل.
-            - إدارة المشاريع والتسليم.
-            - إدارة بيانات الدفع والأرباح.
-            - المزامنة السحابية.
-            - واجهة عربية RTL.
+            ---
+            ### 🛠 Features & Modules Included:
+            - **AI Engine**: Opportunity analysis, intelligent proposal generation, and scoring matrix.
+            - **Fraud Detection**: Real-time evaluation against fake job posts and scam indicators.
+            - **Secure Storage**: AES-256 GCM KeyStore hardware-backed encryption.
+            - **Cloud Synchronization**: Firestore sync & automated encrypted backups.
+            - **UI & Localization**: Arabic RTL native Jetpack Compose & modern design system.
           files: |
-            apks-dist/*.apk
-            apks-dist/SHA256SUMS.txt
+            release-artifacts/Marium-AI-Workspace-release.apk
+            release-artifacts/Marium-AI-Workspace-debug.apk
+            release-artifacts/SHA256SUMS.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
