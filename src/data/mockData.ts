@@ -367,12 +367,12 @@ export const initialActiveProjects: ActiveProject[] = [
 
 export const initialPaymentMethods: PaymentMethod[] = [
   {
-    id: 'pm-1',
+    id: 'pm-kuraimi-primary',
     type: 'bank',
-    name: 'حساب بنكي مباشر (IBAN الدولي)',
-    provider: 'Global Commercial Bank',
-    accountNumber: 'SA44 •••• •••• 4892',
-    balance: 950.00,
+    name: 'حساب جاري (بنك الكريمي)',
+    provider: 'بنك الكريمي للتمويل الأصغر الإسلامي',
+    accountNumber: '3181903553',
+    balance: 1420.00,
     currency: 'USD',
     isDefault: true,
   },
@@ -395,6 +395,16 @@ export const initialPaymentMethods: PaymentMethod[] = [
     balance: 0.00,
     currency: 'USDT',
     isDefault: false,
+  },
+  {
+    id: 'pm-1',
+    type: 'bank',
+    name: 'حساب بنكي دولي (IBAN)',
+    provider: 'Global Commercial Bank',
+    accountNumber: 'SA44 •••• •••• 4892',
+    balance: 0.00,
+    currency: 'USD',
+    isDefault: false,
   }
 ];
 
@@ -402,7 +412,7 @@ export const initialTransactions: Transaction[] = [
   {
     id: 'tx-101',
     date: '2026-08-16 14:22',
-    description: 'أرباح مستلمة: تصميم هوية بصرية دفعة أولى (شركة الإبداع)',
+    description: 'أرباح مستلمة: تصميم هوية بصرية دفعة أولى (تحويل لحساب الكريمي: 3181903553)',
     amount: 420.00,
     currency: 'USD',
     status: 'completed',
@@ -411,7 +421,7 @@ export const initialTransactions: Transaction[] = [
   {
     id: 'tx-102',
     date: '2026-08-12 09:15',
-    description: 'أرباح مستلمة: دورة Excel التدريبية (أكاديمية النجاح)',
+    description: 'أرباح مستلمة: دورة Excel التدريبية (تحويل لحساب الكريمي: 3181903553)',
     amount: 350.00,
     currency: 'USD',
     status: 'completed',
@@ -420,7 +430,7 @@ export const initialTransactions: Transaction[] = [
   {
     id: 'tx-103',
     date: '2026-08-08 18:40',
-    description: 'أرباح مستلمة: ترجمة مقالات تقنية (دار النشر الدولية)',
+    description: 'أرباح مستلمة: ترجمة مقالات تقنية (دار النشر الدولية - الكريمي)',
     amount: 180.00,
     currency: 'USD',
     status: 'completed',

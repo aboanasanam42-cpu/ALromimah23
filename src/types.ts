@@ -143,7 +143,7 @@ export interface Transaction {
   amount: number;
   currency: string;
   status: 'completed' | 'processing' | 'failed';
-  type: 'payout' | 'deposit' | 'subscription' | 'fee';
+  type: 'payout' | 'deposit' | 'subscription' | 'fee' | 'withdrawal';
 }
 
 export interface AIAnalysisRequest {

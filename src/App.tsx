@@ -282,6 +282,25 @@ export function App() {
     }
   };
 
+  const handleUpdatePaymentMethod = async (updatedPm: PaymentMethod) => {
+    setPaymentMethods((prev) =>
+      prev.map((pm) => (pm.id === updatedPm.id ? updatedPm : pm))
+    );
+    if (currentUser) {
+      try {
+        await savePaymentMethod(currentUser.uid, updatedPm);
+      } catch (err) {
+        console.error('Firestore update payment failed:', err);
+      }
+    }
+    setSyncNotification(
+      language === 'ar'
+        ? 'تم تحديث بيانات حساب بنك الكريمي بنجاح!'
+        : 'Bank account details updated successfully!'
+    );
+    setTimeout(() => setSyncNotification(null), 4000);
+  };
+
   const handleAddSyncLog = async (newLog: SyncLog) => {
     setSyncLogs([newLog, ...syncLogs]);
     if (currentUser) {
@@ -361,17 +380,22 @@ export function App() {
     const proj = projects.find((p) => p.id === projectId);
     if (!proj) return;
 
-    // Credit payment into default wallet
+    // Credit payment into primary Kuraimi Bank account (3181903553)
     const payout = proj.payoutUSD;
-    setPaymentMethods((prev) =>
-      prev.map((pm, idx) => (idx === 0 ? { ...pm, balance: pm.balance + payout } : pm))
-    );
+    let updatedPaymentMethods: PaymentMethod[] = [];
+    setPaymentMethods((prev) => {
+      const kuraimiIdx = prev.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
+      const targetIdx = kuraimiIdx >= 0 ? kuraimiIdx : 0;
+      const res = prev.map((pm, idx) => (idx === targetIdx ? { ...pm, balance: pm.balance + payout } : pm));
+      updatedPaymentMethods = res;
+      return res;
+    });
 
     const newTx = {
       id: `tx-${Date.now()}`,
       amount: payout,
       currency: 'USD',
-      description: `استلام أرباح إنجاز مشروع: ${proj.title}`,
+      description: `استلام أرباح إنجاز مشروع: ${proj.title} (تحويل لحساب بنك الكريمي: 3181903553)`,
       date: new Date().toISOString().split('T')[0],
       status: 'completed' as const,
       type: 'payout' as const,
@@ -387,12 +411,71 @@ export function App() {
       try {
         await updateProjectInCloud(currentUser.uid, projectId, { status: 'paid', progress: 100 });
         await saveTransaction(currentUser.uid, newTx);
+        const targetPm = updatedPaymentMethods.find((pm) => pm.accountNumber === '3181903553') || updatedPaymentMethods[0];
+        if (targetPm) {
+          await savePaymentMethod(currentUser.uid, targetPm);
+        }
       } catch (e) {
         console.error(e);
       }
     }
 
+    setSyncNotification(
+      language === 'ar'
+        ? `تم تسليم المشروع وقيد $${payout} في حسابك الجاري ببنك الكريمي 3181903553 بنجاح!`
+        : `Project delivered! $${payout} credited to Al-Kuraimi Account 3181903553.`
+    );
+    setTimeout(() => setSyncNotification(null), 5000);
+
     setActiveTab('payments');
+  };
+
+  const handleWithdrawToKuraimi = async (amount: number, currency: string, note?: string) => {
+    let updatedTargetPm: PaymentMethod | undefined;
+
+    setPaymentMethods((prev) => {
+      const kuraimiIdx = prev.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
+      const targetIdx = kuraimiIdx >= 0 ? kuraimiIdx : 0;
+      return prev.map((pm, idx) => {
+        if (idx === targetIdx) {
+          const newBal = Math.max(0, pm.balance - amount);
+          const updated = { ...pm, balance: newBal };
+          updatedTargetPm = updated;
+          return updated;
+        }
+        return pm;
+      });
+    });
+
+    const newTx = {
+      id: `tx-kimb-${Date.now()}`,
+      amount: -amount,
+      currency: currency || 'USD',
+      description: `سحب نقدي فوري لحساب بنك الكريمي رقم: 3181903553 (${note || 'سحب أرباح'})`,
+      date: new Date().toISOString().split('T')[0],
+      status: 'completed' as const,
+      type: 'withdrawal' as const,
+    };
+
+    setTransactions((prev) => [newTx, ...prev]);
+
+    if (currentUser) {
+      try {
+        await saveTransaction(currentUser.uid, newTx);
+        if (updatedTargetPm) {
+          await savePaymentMethod(currentUser.uid, updatedTargetPm);
+        }
+      } catch (err) {
+        console.error('Failed to sync withdrawal transaction:', err);
+      }
+    }
+
+    setSyncNotification(
+      language === 'ar'
+        ? `تم سحب وتحويل $${amount} فورياً إلى حساب بنك الكريمي رقم 3181903553 بنجاح!`
+        : `Successfully withdrew $${amount} to Kuraimi Bank account 3181903553!`
+    );
+    setTimeout(() => setSyncNotification(null), 5000);
   };
 
   const handleCreateNewProject = async (e: React.FormEvent) => {
@@ -516,6 +599,8 @@ export function App() {
             paymentMethods={paymentMethods}
             transactions={transactions}
             onAddPaymentMethod={handleAddPaymentMethod}
+            onUpdatePaymentMethod={handleUpdatePaymentMethod}
+            onWithdrawToKuraimi={handleWithdrawToKuraimi}
           />
         )}
 
