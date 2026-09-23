@@ -57,6 +57,7 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
   const [withdrawCurrency, setWithdrawCurrency] = useState<'USD' | 'YER' | 'SAR'>('USD');
   const [withdrawNote, setWithdrawNote] = useState('سحب أرباح إنجاز مشاريع مساحة العمل');
   const [isProcessingWithdraw, setIsProcessingWithdraw] = useState(false);
+  const [withdrawError, setWithdrawError] = useState<string | null>(null);
 
   // Currency display toggle for Kuraimi card
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'YER' | 'SAR'>('USD');
@@ -70,7 +71,7 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
   const [editKuraimiAccountNumber, setEditKuraimiAccountNumber] = useState(currentAccountNumber);
   const [editKuraimiCurrency, setEditKuraimiCurrency] = useState(kuraimiAccount?.currency || 'USD');
 
-  const kuraimiBalanceUSD = kuraimiAccount ? kuraimiAccount.balance : 1420.0;
+  const kuraimiBalanceUSD = kuraimiAccount ? kuraimiAccount.balance : 0;
   const totalBalance = paymentMethods.reduce((acc, pm) => acc + pm.balance, 0);
 
   // Exchange rates for Kuraimi microfinance display
@@ -138,22 +139,50 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
     }
 
     setIsProcessingWithdraw(true);
+    setWithdrawError(null);
 
     try {
-      // Call backend API if available
+      const response = await fetch('/api/payout/kuraimi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: amountNum,
+          currency: withdrawCurrency,
+          recipientAccount: currentAccountNumber,
+          notes: withdrawNote,
+        }),
+      });
+
+      const rawBody = await response.text();
+      let payload: any = null;
       try {
-        await fetch('/api/payout/kuraimi', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: amountNum,
-            currency: withdrawCurrency,
-            recipientAccount: '3181903553',
-            notes: withdrawNote,
-          }),
-        });
-      } catch (err) {
-        console.warn('Backend API fallback for withdrawal');
+        payload = rawBody ? JSON.parse(rawBody) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!response.ok || payload?.success !== true) {
+        const providerMessage = payload?.error || payload?.message;
+        throw new Error(
+          providerMessage ||
+            (language === 'ar'
+              ? `تعذر تنفيذ التحويل (HTTP ${response.status}). لم يتم خصم الرصيد ولم يُنشأ إيصال.`
+              : `Transfer failed (HTTP ${response.status}). No balance was deducted and no receipt was created.`)
+        );
+      }
+
+      const transaction = payload?.transaction;
+      if (
+        !transaction ||
+        transaction.status !== 'completed' ||
+        typeof transaction.id !== 'string' ||
+        !transaction.id.trim()
+      ) {
+        throw new Error(
+          language === 'ar'
+            ? 'لم يؤكد مزود الدفع إتمام التحويل. لم يتم خصم الرصيد ولم يُنشأ إيصال نجاح.'
+            : 'The payment provider did not confirm a completed transfer. No balance was deducted and no success receipt was created.'
+        );
       }
 
       if (onWithdrawToKuraimi) {
@@ -161,16 +190,15 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
       }
 
       const receipt = {
-        txId: `KIMB-${Math.floor(10000000 + Math.random() * 90000000)}`,
-        date: new Date().toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US'),
-        amount: amountNum,
-        currency: withdrawCurrency,
-        bank: 'بنك الكريمي للتمويل الأصغر الإسلامي',
-        account: '3181903553',
-        accountName: 'حساب جاري نشط ومعتمد',
-        fee: '0.00 USD (مجاني للعمل الحر)',
-        service: 'الكريمي إكسبرس / خدمة حاسب',
-        note: withdrawNote,
+        txId: transaction.referenceCode || transaction.id,
+        date: transaction.timestamp
+          ? new Date(transaction.timestamp).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US')
+          : new Date().toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US'),
+        amount: Number(transaction.amount),
+        currency: transaction.currency || withdrawCurrency,
+        bank: transaction.bank || 'بنك الكريمي للتمويل الأصغر الإسلامي',
+        account: transaction.accountNumber || currentAccountNumber,
+        fee: transaction.fee || (language === 'ar' ? 'غير محددة من مزود الدفع' : 'Not provided by provider'),
       };
 
       setLastReceipt(receipt);
@@ -178,6 +206,13 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
       setShowReceiptModal(true);
     } catch (error) {
       console.error(error);
+      setWithdrawError(
+        error instanceof Error
+          ? error.message
+          : language === 'ar'
+            ? 'تعذر الاتصال بخدمة التحويل. لم يتم تنفيذ العملية.'
+            : 'Could not reach the transfer service. The operation was not executed.'
+      );
     } finally {
       setIsProcessingWithdraw(false);
     }
@@ -193,14 +228,14 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
               {language === 'ar' ? 'إدارة الحسابات البنكية والأرباح' : 'Bank Accounts & Earnings Hub'}
             </h2>
             <span className="px-2.5 py-0.5 bg-emerald-500/20 text-emerald-300 border border-emerald-400/40 text-[11px] font-extrabold rounded-full flex items-center gap-1">
-              <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-              {language === 'ar' ? 'ربط بنكي حقيقي 100%' : '100% Real Bank Link'}
+              <AlertCircle className="w-3 h-3 text-amber-300" />
+              {language === 'ar' ? 'ربط API غير مفعّل' : 'Bank API not configured'}
             </span>
           </div>
           <p className="text-emerald-100/80 text-xs sm:text-sm max-w-xl leading-relaxed">
             {language === 'ar'
-              ? 'الحساب البنكي المعتمد مرتبط رسمياً ببنك الكريمي للتمويل الأصغر، جاهز لاستقبال مستحقات المشاريع وسحب الأموال فورياً دون قيود.'
-              : 'Directly linked to Al-Kuraimi Islamic Microfinance Bank for receiving project milestone payouts and instant withdrawals.'}
+              ? 'هذه شاشة لإدارة بيانات الاستلام فقط. لا يتم تنفيذ أي تحويل بنكي قبل تهيئة API رسمي ومصادقة البنك.'
+              : 'This screen stores payout details only. No bank transfer is executed until an official, authenticated API is configured.'}
           </p>
         </div>
 
@@ -238,11 +273,11 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
               <div>
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                    {language === 'ar' ? 'الحساب الافتراضي المعتمد' : 'Default Primary Account'}
+                    {language === 'ar' ? 'بيانات حساب مدخلة' : 'Stored account details'}
                   </span>
                   <span className="px-2 py-0.5 rounded-full bg-emerald-500/30 text-emerald-300 border border-emerald-400/40 text-[10px] font-extrabold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3 text-emerald-400" />
-                    {language === 'ar' ? 'موثق ونشط 100%' : 'Active & Verified'}
+                    <AlertCircle className="w-3 h-3 text-amber-300" />
+                    {language === 'ar' ? 'لم يتم التحقق مصرفياً' : 'Not bank-verified'}
                   </span>
                 </div>
                 <h3 className="text-lg sm:text-xl font-black text-white mt-0.5">
@@ -320,20 +355,20 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
                 </div>
               </div>
               <span className="text-[10px] text-emerald-200/70 block">
-                {language === 'ar' ? 'حساب جاري رئيسي بالدولار الأمريكي (USD) معتمد للسحب والإيداع' : 'Primary USD Current Account verified for payouts'}
+                {language === 'ar' ? 'رقم محفوظ محلياً؛ لا يمثل اتصالاً مصرفياً أو تفويضاً للتحويل' : 'Stored locally; this does not represent a bank connection or transfer authorization'}
               </span>
             </div>
 
             {/* Available Balance Box */}
             <div className="bg-black/30 backdrop-blur-sm p-4 rounded-2xl border border-emerald-500/20 space-y-1">
               <span className="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wider block">
-                {language === 'ar' ? 'الرصيد المتاح للسحب الفوري' : 'Available Balance for Payout'}
+                {language === 'ar' ? 'الرصيد المسجل محلياً' : 'Locally recorded balance'}
               </span>
               <div className="text-xl sm:text-2xl font-black text-emerald-300">
                 {getConvertedKuraimiBalance()}
               </div>
               <span className="text-[10px] text-emerald-200/60 block">
-                {language === 'ar' ? 'مستحق من إنجاز المشاريع المعتمدة' : 'Accrued from delivered project milestones'}
+                {language === 'ar' ? 'ليس رصيداً مصرفياً مؤكداً' : 'Not a bank-confirmed balance'}
               </span>
             </div>
 
@@ -341,7 +376,7 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
             <div className="bg-black/30 backdrop-blur-sm p-4 rounded-2xl border border-emerald-500/20 flex flex-col justify-between space-y-2">
               <div>
                 <span className="text-[11px] font-extrabold text-emerald-300 uppercase tracking-wider block">
-                  {language === 'ar' ? 'الخدمات السريعة المرتبطة' : 'Supported Services'}
+                  {language === 'ar' ? 'الخدمات غير المهيأة' : 'Unconfigured services'}
                 </span>
                 <span className="text-xs text-white/90 font-medium block mt-1">
                   الكريمي جوال • حاسب (Haseeb) • الكريمي إكسبرس
@@ -368,22 +403,22 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
           </div>
           <div className="text-xs">
             <span className="font-extrabold text-emerald-950 block">
-              {language === 'ar' ? 'نظام الحماية والربط المالي الفوري' : 'Automated Financial Escrow & Banking Link'}
+                {language === 'ar' ? 'حالة الربط المالي' : 'Financial integration status'}
             </span>
             <span className="text-slate-600">
               {language === 'ar'
-                ? 'يتم تحويل أرباح أي مشروع مكتمل مباشرة لحسابك الجاري في بنك الكريمي رقم 3181903553 مع تشفير كامل AES-256 وسجل فوري.'
-                : 'Project payouts are automatically routed to your Al-Kuraimi Current Account (3181903553) with AES-256 cloud encryption.'}
+                ? 'لا توجد حالياً خدمة تحويل مصرفي مفعّلة. تشفير Firebase يحمي بيانات التطبيق فقط ولا يحول الأموال.'
+                : 'No bank transfer service is currently enabled. Firebase encryption protects app data only; it does not move money.'}
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2 text-xs font-bold text-emerald-800 shrink-0">
           <span className="px-2.5 py-1 bg-white border border-emerald-300 rounded-lg shadow-2xs">
-            {language === 'ar' ? 'رسوم السحب: 0%' : 'Fee: 0%'}
+            {language === 'ar' ? 'الرسوم: يحددها المزود' : 'Fees: provider-defined'}
           </span>
           <span className="px-2.5 py-1 bg-white border border-emerald-300 rounded-lg shadow-2xs">
-            {language === 'ar' ? 'المعالجة: فورية' : 'Instant Execution'}
+            {language === 'ar' ? 'الحالة: غير مفعّلة' : 'Status: not enabled'}
           </span>
         </div>
       </div>
@@ -551,8 +586,8 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
                 </h3>
                 <p className="text-xs text-slate-500">
                   {language === 'ar'
-                    ? 'سيتم تحويل المبلغ مباشرة إلى حسابك الجاري المعتمد لدى بنك الكريمي.'
-                    : 'Funds will be transferred directly to your verified Al-Kuraimi Current Account.'}
+                    ? 'لن يظهر إيصال نجاح إلا بعد تأكيد API رسمي من مزود الدفع.'
+                    : 'A success receipt appears only after confirmation from an official payment API.'}
                 </p>
               </div>
 
@@ -565,6 +600,11 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
             </div>
 
             <form onSubmit={handleExecuteWithdrawal} className="space-y-4">
+              {withdrawError && (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-3 text-xs font-bold leading-relaxed text-red-800" role="alert">
+                  {withdrawError}
+                </div>
+              )}
               {/* Account summary display */}
               <div className="p-3.5 bg-emerald-50/70 rounded-2xl border border-emerald-200 text-xs space-y-1">
                 <div className="flex items-center justify-between text-emerald-950 font-bold">
@@ -674,12 +714,12 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
                 <CheckCircle2 className="w-8 h-8" />
               </div>
               <h3 className="text-lg font-black text-slate-900">
-                {language === 'ar' ? 'إشعار تحويل بنكي ناجح 100%' : 'Transfer Successful'}
+                {language === 'ar' ? 'تأكيد تحويل من مزود الدفع' : 'Provider-confirmed transfer'}
               </h3>
               <p className="text-xs text-slate-500">
-                {language === 'ar'
-                  ? 'تم إرسال وقيد مبلغ السحب بنجاح إلى حسابك في بنك الكريمي للتمويل الأصغر.'
-                  : 'Your withdrawal has been successfully posted to Al-Kuraimi Bank.'}
+                  {language === 'ar'
+                  ? 'تم عرض هذا الإيصال فقط بعد استلام تأكيد مكتمل من خادم مزود الدفع.'
+                  : 'This receipt is shown only after the payment server confirms completion.'}
               </p>
             </div>
 
@@ -741,8 +781,8 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
                 </h3>
                 <p className="text-xs text-slate-500">
                   {language === 'ar'
-                    ? 'رقم حسابك المعتمد لاستلام أرباح المشاريع والتحويلات المالية بالدولار الأمريكي.'
-                    : 'Your verified account for receiving project payouts in USD.'}
+                    ? 'رقم حساب محفوظ محلياً؛ لا يعني اعتماداً مصرفياً أو تفويضاً للتحويل.'
+                    : 'Account number stored locally; this does not mean bank verification or transfer authorization.'}
                 </p>
               </div>
               <button

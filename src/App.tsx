@@ -380,41 +380,13 @@ export function App() {
     const proj = projects.find((p) => p.id === projectId);
     if (!proj) return;
 
-    // Credit payment into primary Kuraimi Bank account (3181903553)
-    const payout = proj.payoutUSD;
-    let updatedPaymentMethods: PaymentMethod[] = [];
-    setPaymentMethods((prev) => {
-      const kuraimiIdx = prev.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
-      const targetIdx = kuraimiIdx >= 0 ? kuraimiIdx : 0;
-      const res = prev.map((pm, idx) => (idx === targetIdx ? { ...pm, balance: pm.balance + payout } : pm));
-      updatedPaymentMethods = res;
-      return res;
-    });
-
-    const newTx = {
-      id: `tx-${Date.now()}`,
-      amount: payout,
-      currency: 'USD',
-      description: `استلام أرباح إنجاز مشروع: ${proj.title} (تحويل لحساب بنك الكريمي: 3181903553)`,
-      date: new Date().toISOString().split('T')[0],
-      status: 'completed' as const,
-      type: 'payout' as const,
-    };
-
-    setTransactions((prev) => [newTx, ...prev]);
-
     setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, status: 'paid', progress: 100 } : p))
+      prev.map((p) => (p.id === projectId ? { ...p, status: 'delivered', progress: 100 } : p))
     );
 
     if (currentUser) {
       try {
-        await updateProjectInCloud(currentUser.uid, projectId, { status: 'paid', progress: 100 });
-        await saveTransaction(currentUser.uid, newTx);
-        const targetPm = updatedPaymentMethods.find((pm) => pm.accountNumber === '3181903553') || updatedPaymentMethods[0];
-        if (targetPm) {
-          await savePaymentMethod(currentUser.uid, targetPm);
-        }
+        await updateProjectInCloud(currentUser.uid, projectId, { status: 'delivered', progress: 100 });
       } catch (e) {
         console.error(e);
       }
@@ -422,12 +394,12 @@ export function App() {
 
     setSyncNotification(
       language === 'ar'
-        ? `تم تسليم المشروع وقيد $${payout} في حسابك الجاري ببنك الكريمي 3181903553 بنجاح!`
-        : `Project delivered! $${payout} credited to Al-Kuraimi Account 3181903553.`
+        ? 'تم تسليم المشروع. لم يتم تسجيل دفعة أو تحويل بنكي؛ الدفع يحتاج تأكيداً من منصة العميل أو مزود دفع رسمي.'
+        : 'Project delivered. No payout or bank transfer was recorded; payment requires confirmation from the client platform or an official provider.'
     );
     setTimeout(() => setSyncNotification(null), 5000);
 
-    setActiveTab('payments');
+    setActiveTab('projects');
   };
 
   const handleWithdrawToKuraimi = async (amount: number, currency: string, note?: string) => {
@@ -451,7 +423,7 @@ export function App() {
       id: `tx-kimb-${Date.now()}`,
       amount: -amount,
       currency: currency || 'USD',
-      description: `سحب نقدي فوري لحساب بنك الكريمي رقم: 3181903553 (${note || 'سحب أرباح'})`,
+      description: `تحويل مؤكد من مزود الدفع إلى حساب بنك الكريمي رقم: 3181903553 (${note || 'سحب أرباح'})`,
       date: new Date().toISOString().split('T')[0],
       status: 'completed' as const,
       type: 'withdrawal' as const,
@@ -472,8 +444,8 @@ export function App() {
 
     setSyncNotification(
       language === 'ar'
-        ? `تم سحب وتحويل $${amount} فورياً إلى حساب بنك الكريمي رقم 3181903553 بنجاح!`
-        : `Successfully withdrew $${amount} to Kuraimi Bank account 3181903553!`
+        ? `أكد مزود الدفع تحويل مبلغ $${amount} إلى حساب بنك الكريمي رقم 3181903553.`
+        : `The payment provider confirmed a $${amount} transfer to Kuraimi Bank account 3181903553.`
     );
     setTimeout(() => setSyncNotification(null), 5000);
   };

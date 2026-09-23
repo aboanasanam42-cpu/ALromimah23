@@ -372,7 +372,7 @@ export const initialPaymentMethods: PaymentMethod[] = [
     name: 'حساب جاري (بنك الكريمي)',
     provider: 'بنك الكريمي للتمويل الأصغر الإسلامي',
     accountNumber: '3181903553',
-    balance: 1420.00,
+    balance: 0.00,
     currency: 'USD',
     isDefault: true,
   },
@@ -408,44 +408,8 @@ export const initialPaymentMethods: PaymentMethod[] = [
   }
 ];
 
-export const initialTransactions: Transaction[] = [
-  {
-    id: 'tx-101',
-    date: '2026-08-16 14:22',
-    description: 'أرباح مستلمة: تصميم هوية بصرية دفعة أولى (تحويل لحساب الكريمي: 3181903553)',
-    amount: 420.00,
-    currency: 'USD',
-    status: 'completed',
-    type: 'payout',
-  },
-  {
-    id: 'tx-102',
-    date: '2026-08-12 09:15',
-    description: 'أرباح مستلمة: دورة Excel التدريبية (تحويل لحساب الكريمي: 3181903553)',
-    amount: 350.00,
-    currency: 'USD',
-    status: 'completed',
-    type: 'payout',
-  },
-  {
-    id: 'tx-103',
-    date: '2026-08-08 18:40',
-    description: 'أرباح مستلمة: ترجمة مقالات تقنية (دار النشر الدولية - الكريمي)',
-    amount: 180.00,
-    currency: 'USD',
-    status: 'completed',
-    type: 'payout',
-  },
-  {
-    id: 'tx-104',
-    date: '2026-08-05 11:05',
-    description: 'رسوم مزامنة السحابة المشفرة لـ Firebase',
-    amount: -0.00,
-    currency: 'USD',
-    status: 'completed',
-    type: 'fee',
-  }
-];
+// No synthetic bank transactions are shown before a real provider confirms them.
+export const initialTransactions: Transaction[] = [];
 
 export const initialSyncLogs: SyncLog[] = [
   {
@@ -484,4 +448,3 @@ export const initialSecurityAudits: SecurityAuditItem[] = [
     status: 'pass',
   }
 ];
-

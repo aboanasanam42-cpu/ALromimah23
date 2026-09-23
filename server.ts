@@ -113,7 +113,7 @@ Return ONLY valid JSON matching this schema:
       readyToDeliver: isReady,
       qualityScore: isReady ? 98 : 75,
       issues: isReady ? [] : ["يرجى إكمال جميع خطوات المشروع قبل طلب فحص الجودة والتسليم."],
-      recommendation: isReady ? "العمل جاهز 100% للتسليم واستلام الأرباح في المحفظة." : "أكمل المهام المتبقية للحصول على تقييم 5 نجوم."
+      recommendation: isReady ? "العمل جاهز للتسليم. لا يضمن هذا الفحص الدفع ولا ينفذ أي تحويل بنكي؛ يجب تأكيد الدفع عبر منصة العميل أو مزود رسمي." : "أكمل المهام المتبقية قبل التسليم؛ لا يتم إنشاء أو ضمان أي تحويل بنكي من خلال فحص الجودة."
     });
   });
 
@@ -136,44 +136,24 @@ Return ONLY valid JSON matching this schema:
     res.json({
       success: true,
       bank: "بنك الكريمي للتمويل الأصغر الإسلامي (Kuraimi Islamic Microfinance Bank)",
-      accountType: "حساب جاري (Current Account)",
-      accountNumber: "3181903553",
-      supportedServices: [
-        "الكريمي جوال (Kuraimi Jawwal)",
-        "حاسب (Haseeb POS & E-Pay)",
-        "الكريمي إكسبرس (Kuraimi Express)",
-        "تحويلات سويفت والحوالات البنكية المباشرة"
-      ],
-      supportedCurrencies: ["USD", "YER", "SAR"],
-      status: "موثق ونشط 100% (Verified & Active)",
-      payoutSpeed: "فوري (Instant)",
+      capability: "merchant-payment-api",
+      status: "not_configured",
+      message: "لا يوجد اتصال مصرفي فعلي مهيأ. يجب الحصول على موافقة البنك ومواصفات API الرسمية قبل تفعيل التحويلات.",
     });
   });
 
   app.post("/api/payout/kuraimi", (req, res) => {
-    const { amount, currency = 'USD', recipientAccount = '3181903553', notes } = req.body || {};
+    const { amount } = req.body || {};
 
-    if (!amount || amount <= 0) {
+    if (typeof amount !== "number" || !Number.isFinite(amount) || amount <= 0) {
       return res.status(400).json({ success: false, error: 'مبلغ التحويل يجب أن يكون أكبر من 0' });
     }
 
-    const txId = `KIMB-${Date.now().toString().slice(-8)}`;
-    const timestamp = new Date().toISOString();
-
-    return res.json({
-      success: true,
-      message: `تم تحويل المبلغ بنجاح إلى حساب بنك الكريمي رقم: ${recipientAccount}`,
-      transaction: {
-        id: txId,
-        accountNumber: recipientAccount,
-        bank: "بنك الكريمي للتمويل الأصغر الإسلامي",
-        amount: Number(amount),
-        currency,
-        status: "completed",
-        timestamp,
-        notes: notes || "سحب أرباح إنجاز مشاريع مساحة عمل مريم AI",
-        referenceCode: `REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`
-      }
+    return res.status(503).json({
+      success: false,
+      error: "خدمة التحويل البنكي غير مفعّلة: لا توجد بيانات اعتماد أو مواصفات API رسمية لبنك الكريمي في الخادم.",
+      code: "PAYOUT_PROVIDER_NOT_CONFIGURED",
+      nextStep: "تواصل مع بنك الكريمي للحصول على خدمة الربط الإلكتروني API ومواصفات المصادقة وعمليات الصرف قبل إضافة المحول البرمجي.",
     });
   });
   app.post("/api/analyze", async (req, res) => {
