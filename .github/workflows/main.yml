@@ -2,10 +2,10 @@ name: Marium AI Workspace CI/CD
 
 on:
   push:
-    branches: ["main"]
+    branches: ["main", "Working"]
     tags: ["v*"]
   pull_request:
-    branches: ["main"]
+    branches: ["main", "Working"]
   workflow_dispatch:
 
 concurrency:
@@ -79,7 +79,7 @@ jobs:
           echo "sdk.dir=${ANDROID_HOME}" > local.properties
 
       - name: Install web dependencies
-        run: npm install
+        run: npm ci
 
       - name: TypeScript validation
         run: npm run lint
@@ -193,7 +193,7 @@ jobs:
           retention-days: 30
 
       - name: Publish GitHub Release
-        if: ${{ (github.event_name == 'push' && github.ref == 'refs/heads/main') || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
+        if: ${{ (github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/Working')) || startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v2.0.{0}', github.run_number) }}
