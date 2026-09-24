@@ -1,0 +1,32 @@
+{
+  "id": "/",
+  "name": "مريم AI - مساحة العمل والذكاء الاصطناعي",
+  "short_name": "مريم AI",
+  "description": "منصة مريم للعمل عن بُعد والذكاء الاصطناعي: تدقيق وتقييم الفرص، إدارة وتسليم المشاريع، ومزامنة الأرباح مع بنك الكريمي للتمويل الأصغر (حساب: 3181903553).",
+  "theme_color": "#064e3b",
+  "background_color": "#0a071f",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "start_url": "/",
+  "scope": "/",
+  "icons": [
+    {
+      "src": "/pwa-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-maskable-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

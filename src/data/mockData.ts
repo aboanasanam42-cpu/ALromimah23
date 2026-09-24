@@ -103,7 +103,12 @@ export const CATEGORIES_LIST: CategoryInfo[] = [
   },
 ];
 
-export const initialOpportunities: Opportunity[] = [
+/**
+ * @deprecated Static mock data is deprecated.
+ * The application has been refactored to read and write live data directly to Firebase Firestore.
+ * This data is only used for initial cloud database seeding when a user's collection is empty.
+ */
+export const DEFAULT_SEED_OPPORTUNITIES: Opportunity[] = [
   {
     id: 'opp-1',
     title: 'تصميم بروشور لشركة تقنية',
@@ -302,7 +307,11 @@ export const initialOpportunities: Opportunity[] = [
   }
 ];
 
-export const initialActiveProjects: ActiveProject[] = [
+/**
+ * @deprecated Static mock data is deprecated.
+ * Projects now sync directly with Firebase Firestore.
+ */
+export const DEFAULT_SEED_PROJECTS: ActiveProject[] = [
   {
     id: 'proj-1',
     title: 'دورة تدريبية في Excel',
@@ -484,4 +493,9 @@ export const initialSecurityAudits: SecurityAuditItem[] = [
     status: 'pass',
   }
 ];
+
+export const initialOpportunities = DEFAULT_SEED_OPPORTUNITIES;
+export const initialActiveProjects = DEFAULT_SEED_PROJECTS;
+export const DEFAULT_SEED_PAYMENT_METHODS = initialPaymentMethods;
+
 

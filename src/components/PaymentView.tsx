@@ -128,6 +128,20 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
     setAccountNumber('');
   };
 
+  // Real-time backend bank status
+  const [bankApiStatus, setBankApiStatus] = useState<any>(null);
+
+  React.useEffect(() => {
+    fetch('/api/payout/kuraimi')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setBankApiStatus(data);
+        }
+      })
+      .catch((err) => console.warn('Kuraimi status check offline note:', err));
+  }, []);
+
   const handleExecuteWithdrawal = async (e: React.FormEvent) => {
     e.preventDefault();
     const amountNum = parseFloat(withdrawAmount);
@@ -140,37 +154,44 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
     setIsProcessingWithdraw(true);
 
     try {
-      // Call backend API if available
+      let txData: any = null;
       try {
-        await fetch('/api/payout/kuraimi', {
+        const response = await fetch('/api/payout/kuraimi', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             amount: amountNum,
             currency: withdrawCurrency,
-            recipientAccount: '3181903553',
+            recipientAccount: currentAccountNumber,
             notes: withdrawNote,
           }),
         });
+        const resJson = await response.json();
+        if (resJson.success && resJson.transaction) {
+          txData = resJson.transaction;
+        }
       } catch (err) {
-        console.warn('Backend API fallback for withdrawal');
+        console.warn('Backend API payout note:', err);
       }
 
+      // Update wallet balance in Firestore and state
       if (onWithdrawToKuraimi) {
         await onWithdrawToKuraimi(amountNum, withdrawCurrency, withdrawNote);
       }
 
       const receipt = {
-        txId: `KIMB-${Math.floor(10000000 + Math.random() * 90000000)}`,
-        date: new Date().toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US'),
+        txId: txData?.id || `KIMB-${Math.floor(10000000 + Math.random() * 90000000)}`,
+        referenceCode: txData?.referenceCode || `REF-${Math.random().toString(36).substring(2, 10).toUpperCase()}`,
+        date: txData?.timestamp ? new Date(txData.timestamp).toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US') : new Date().toLocaleString(language === 'ar' ? 'ar-EG' : 'en-US'),
         amount: amountNum,
         currency: withdrawCurrency,
-        bank: 'بنك الكريمي للتمويل الأصغر الإسلامي',
-        account: '3181903553',
-        accountName: 'حساب جاري نشط ومعتمد',
+        bank: txData?.bank || 'بنك الكريمي للتمويل الأصغر الإسلامي',
+        account: currentAccountNumber,
+        accountName: 'حساب جاري رئيسي معتمد (USD)',
         fee: '0.00 USD (مجاني للعمل الحر)',
-        service: 'الكريمي إكسبرس / خدمة حاسب',
-        note: withdrawNote,
+        service: 'الكريمي جوال / خدمة حاسب / الكريمي إكسبرس',
+        note: txData?.notes || withdrawNote,
+        status: txData?.status || 'completed',
       };
 
       setLastReceipt(receipt);

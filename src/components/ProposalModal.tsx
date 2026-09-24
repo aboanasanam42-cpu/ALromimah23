@@ -19,6 +19,8 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
   const [copied, setCopied] = useState(false);
   const [proposedPrice, setProposedPrice] = useState<number>(opportunity.reward ?? opportunity.rawPayoutUSD);
   const [deliveryDays, setDeliveryDays] = useState<number>(opportunity.executionDurationDays || 3);
+  const [milestones, setMilestones] = useState<string[]>([]);
+  const [clientQuestions, setClientQuestions] = useState<string[]>([]);
   const [coverLetter, setCoverLetter] = useState<string>(
     `مرحباً ${opportunity.company || 'عزيزي العميل'}،\n\nأتقدم إليكم بعرض لتنفيذ مشروع "${opportunity.title}" باحترافية عالية وتسليم في الموعد المحدد. أمتلك خبرة عملية مثبتة في مهارات: ${opportunity.requiredSkills.join('، ')}.\n\nسأضمن لكم مخرجات عالية الجودة مع إمكانية التعديل والمراجعة حتى الرضا التام.\n\nبانتظار تواصلكم للبدء الفوري.`
   );
@@ -44,6 +46,8 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
           setCoverLetter(data.proposal.coverLetter);
           if (data.proposal.proposedPrice) setProposedPrice(data.proposal.proposedPrice);
           if (data.proposal.deliveryDays) setDeliveryDays(data.proposal.deliveryDays);
+          if (Array.isArray(data.proposal.milestones)) setMilestones(data.proposal.milestones);
+          if (Array.isArray(data.proposal.clientQuestions)) setClientQuestions(data.proposal.clientQuestions);
         }
       }
     } catch (e) {
@@ -158,6 +162,29 @@ export const ProposalModal: React.FC<ProposalModalProps> = ({
             className="w-full bg-[#161239] border border-purple-500/30 rounded-2xl p-3.5 text-xs text-slate-100 leading-relaxed focus:outline-none focus:border-purple-400"
           />
         </div>
+
+        {/* Milestones & Client Questions from Gemini */}
+        {milestones.length > 0 && (
+          <div className="bg-[#17113a] p-3.5 rounded-2xl border border-purple-500/20 space-y-1.5">
+            <span className="text-xs font-extrabold text-purple-300">مراحل التنفيذ المقترحة (Milestones):</span>
+            <div className="flex flex-wrap gap-1.5 pt-1">
+              {milestones.map((m, idx) => (
+                <span key={idx} className="px-2.5 py-1 rounded-xl bg-purple-900/40 border border-purple-500/30 text-purple-200 text-[11px] font-semibold">
+                  {idx + 1}. {m}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {clientQuestions.length > 0 && (
+          <div className="bg-[#120d2c] p-3.5 rounded-2xl border border-sky-500/20 space-y-1 text-xs text-sky-200">
+            <span className="font-extrabold block text-sky-300">أسئلة استيضاحية مقترحة للعميل:</span>
+            {clientQuestions.map((q, idx) => (
+              <div key={idx}>• {q}</div>
+            ))}
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="flex items-center justify-between pt-2 border-t border-purple-500/20">

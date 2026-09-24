@@ -3,6 +3,7 @@ import {
   getAuth,
   GoogleAuthProvider,
   signInWithPopup,
+  signInAnonymously,
   signOut as fbSignOut,
   onAuthStateChanged,
   User
@@ -85,6 +86,17 @@ export async function testFirebaseConnection(): Promise<boolean> {
 }
 
 // Authentication Helpers
+export async function ensureAuth(): Promise<User | null> {
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (error) {
+    console.warn('Firebase anonymous authentication note:', error);
+    return null;
+  }
+}
+
 export async function loginWithGoogle(): Promise<User | null> {
   try {
     const result = await signInWithPopup(auth, googleProvider);
@@ -104,6 +116,7 @@ export async function logoutUser(): Promise<void> {
   }
 }
 
-export { onAuthStateChanged };
+export { onAuthStateChanged, signInAnonymously };
 export type { User };
 export { firebaseConfig };
+

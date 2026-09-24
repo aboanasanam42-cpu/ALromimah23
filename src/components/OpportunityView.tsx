@@ -3,6 +3,12 @@ import { Opportunity, Language, ScoreInput, OpportunityStatus } from '../types';
 import { t } from '../utils/localization';
 import { calculate100PointScore } from '../utils/scoring';
 import { analyzeAndScoreOpportunity } from '../utils/aiOpportunityAnalyzer';
+import { auth } from '../lib/firebase';
+import {
+  saveOpportunity,
+  updateOpportunityStatusInCloud,
+  deleteOpportunityFromCloud
+} from '../lib/firestoreService';
 import {
   Search,
   Sliders,
@@ -106,6 +112,15 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
     const analyzed = analyzeAndScoreOpportunity(rawOpp);
 
     onAddOpportunity(analyzed);
+
+    // Persist live to Firebase Firestore directly
+    const currentUid = auth.currentUser?.uid;
+    if (currentUid) {
+      saveOpportunity(currentUid, analyzed).catch((err) => {
+        console.warn('Direct Firestore save failed, syncing with local cache:', err);
+      });
+    }
+
     setShowAddModal(false);
 
     // Reset Form
@@ -120,6 +135,12 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
     if (e) e.stopPropagation();
     if (onUpdateOpportunityStatus) {
       onUpdateOpportunityStatus(id, status);
+    }
+    const currentUid = auth.currentUser?.uid;
+    if (currentUid) {
+      updateOpportunityStatusInCloud(currentUid, id, status).catch((err) => {
+        console.warn('Direct Firestore update failed:', err);
+      });
     }
   };
 

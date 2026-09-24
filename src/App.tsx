@@ -11,12 +11,12 @@ import {
   OpportunityCategory
 } from './types';
 import {
-  initialOpportunities,
-  initialPaymentMethods,
+  DEFAULT_SEED_OPPORTUNITIES,
+  DEFAULT_SEED_PROJECTS,
+  DEFAULT_SEED_PAYMENT_METHODS,
   initialTransactions,
   initialSyncLogs,
   initialSecurityAudits,
-  initialActiveProjects
 } from './data/mockData';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
@@ -35,6 +35,7 @@ import { Plus, X, Briefcase, DollarSign, CheckCircle2 } from 'lucide-react';
 // Firebase imports
 import {
   auth,
+  ensureAuth,
   onAuthStateChanged,
   loginWithGoogle,
   logoutUser,
@@ -55,7 +56,8 @@ import {
   savePaymentMethod,
   saveTransaction,
   saveSyncLog,
-  syncAllToCloud
+  syncAllToCloud,
+  seedInitialDataIfEmpty
 } from './lib/firestoreService';
 
 export function App() {
@@ -68,10 +70,10 @@ export function App() {
   const [firebaseConnected, setFirebaseConnected] = useState<boolean>(false);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // App Data State
-  const [opportunities, setOpportunities] = useState<Opportunity[]>(initialOpportunities);
-  const [projects, setProjects] = useState<ActiveProject[]>(initialActiveProjects);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(initialPaymentMethods);
+  // App Data State (Live from Firebase Firestore)
+  const [opportunities, setOpportunities] = useState<Opportunity[]>(DEFAULT_SEED_OPPORTUNITIES);
+  const [projects, setProjects] = useState<ActiveProject[]>(DEFAULT_SEED_PROJECTS);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(DEFAULT_SEED_PAYMENT_METHODS);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>(initialSyncLogs);
   const [auditLogs, setAuditLogs] = useState(initialSecurityAudits);
@@ -98,17 +100,29 @@ export function App() {
     document.documentElement.lang = language;
   }, [language]);
 
-  // Test Firebase connection & monitor Auth state
+  // Test Firebase connection, ensure authenticated user & monitor Auth state
   useEffect(() => {
     testFirebaseConnection().then((connected) => {
       setFirebaseConnected(connected);
     });
 
-    const unsubscribeAuth = onAuthStateChanged(auth, (user) => {
+    ensureAuth().catch((err) => console.warn('Auth init note:', err));
+
+    const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       setAuthLoading(false);
       if (user) {
-        setSyncNotification(language === 'ar' ? `مرحباً ${user.displayName || 'بك'}، تم الاتصال بـ Firebase` : `Welcome, connected to Firebase`);
+        await seedInitialDataIfEmpty(user.uid, {
+          opportunities: DEFAULT_SEED_OPPORTUNITIES,
+          projects: DEFAULT_SEED_PROJECTS,
+          paymentMethods: DEFAULT_SEED_PAYMENT_METHODS,
+        });
+
+        setSyncNotification(
+          language === 'ar'
+            ? `مرحباً ${user.displayName || 'بك'}، متصل سحابياً بـ Firebase`
+            : `Welcome, connected to Firebase`
+        );
         setTimeout(() => setSyncNotification(null), 4000);
       }
     });
@@ -173,9 +187,9 @@ export function App() {
   const handleLogout = async () => {
     try {
       await logoutUser();
-      setOpportunities(initialOpportunities);
-      setProjects(initialActiveProjects);
-      setPaymentMethods(initialPaymentMethods);
+      setOpportunities(DEFAULT_SEED_OPPORTUNITIES);
+      setProjects(DEFAULT_SEED_PROJECTS);
+      setPaymentMethods(DEFAULT_SEED_PAYMENT_METHODS);
       setTransactions(initialTransactions);
       setSyncLogs(initialSyncLogs);
     } catch (err) {

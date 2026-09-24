@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
 import { ActiveProject, Language } from '../types';
+import { auth } from '../lib/firebase';
+import { updateProjectInCloud, saveProject } from '../lib/firestoreService';
 import {
   Briefcase,
   CheckCircle2,
@@ -36,6 +38,30 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
   const [qualityResult, setQualityResult] = useState<any>(null);
 
   const selectedProject = projects.find((p) => p.id === selectedProjectId) || projects[0];
+
+  const handleStepToggle = (stepId: string) => {
+    if (!selectedProject) return;
+    onUpdateProjectProgress(selectedProject.id, stepId);
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      const updatedSteps = selectedProject.steps.map((s) => (s.id === stepId ? { ...s, completed: !s.completed } : s));
+      const completedCount = updatedSteps.filter((s) => s.completed).length;
+      const progress = Math.round((completedCount / updatedSteps.length) * 100);
+      updateProjectInCloud(uid, selectedProject.id, { steps: updatedSteps, progress }).catch((err) => {
+        console.warn('Direct Firestore project step update failed:', err);
+      });
+    }
+  };
+
+  const handleDeliver = (projId: string) => {
+    onDeliverProject(projId);
+    const uid = auth.currentUser?.uid;
+    if (uid) {
+      updateProjectInCloud(uid, projId, { status: 'paid', progress: 100 }).catch((err) => {
+        console.warn('Direct Firestore project delivery status update failed:', err);
+      });
+    }
+  };
 
   const handleRunQualityCheck = async (proj: ActiveProject) => {
     setIsCheckingQuality(true);
@@ -201,7 +227,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
                 {selectedProject.steps.map((step, idx) => (
                   <div
                     key={step.id}
-                    onClick={() => onUpdateProjectProgress(selectedProject.id, step.id)}
+                    onClick={() => handleStepToggle(step.id)}
                     className={`p-3.5 rounded-2xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
                       step.completed
                         ? 'bg-emerald-950/30 border-emerald-500/40 text-emerald-200'
@@ -283,7 +309,7 @@ export const ProjectsView: React.FC<ProjectsViewProps> = ({
               </button>
 
               <button
-                onClick={() => onDeliverProject(selectedProject.id)}
+                onClick={() => handleDeliver(selectedProject.id)}
                 className="w-full sm:w-auto px-6 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-extrabold rounded-2xl shadow-lg shadow-emerald-950/60 flex items-center justify-center gap-2 transition-all"
               >
                 <Send className="w-4 h-4" />

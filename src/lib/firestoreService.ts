@@ -4,6 +4,7 @@ import {
   setDoc,
   updateDoc,
   deleteDoc,
+  getDocs,
   onSnapshot,
   query,
   where,
@@ -250,6 +251,103 @@ export async function saveSyncLog(userId: string, log: SyncLog): Promise<void> {
     });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
+  }
+}
+
+export async function deleteOpportunityFromCloud(userId: string, id: string): Promise<void> {
+  const path = `opportunities/${id}`;
+  try {
+    await deleteDoc(doc(db, 'opportunities', id));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export async function deleteProjectFromCloud(userId: string, projectId: string): Promise<void> {
+  const path = `projects/${projectId}`;
+  try {
+    await deleteDoc(doc(db, 'projects', projectId));
+  } catch (error) {
+    handleFirestoreError(error, OperationType.DELETE, path);
+  }
+}
+
+export async function getLiveOpportunities(userId: string): Promise<Opportunity[]> {
+  const colPath = 'opportunities';
+  try {
+    const q = query(collection(db, colPath), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const items: Opportunity[] = [];
+    snap.forEach((d) => items.push(d.data() as Opportunity));
+    return items;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, colPath);
+    return [];
+  }
+}
+
+export async function getLiveProjects(userId: string): Promise<ActiveProject[]> {
+  const colPath = 'projects';
+  try {
+    const q = query(collection(db, colPath), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    const items: ActiveProject[] = [];
+    snap.forEach((d) => items.push(d.data() as ActiveProject));
+    return items;
+  } catch (error) {
+    handleFirestoreError(error, OperationType.LIST, colPath);
+    return [];
+  }
+}
+
+// Seed Initial Data into Firestore if User's collections are empty
+export async function seedInitialDataIfEmpty(
+  userId: string,
+  defaults: {
+    opportunities: Opportunity[];
+    projects: ActiveProject[];
+    paymentMethods: PaymentMethod[];
+  }
+): Promise<boolean> {
+  try {
+    const oppQ = query(collection(db, 'opportunities'), where('userId', '==', userId));
+    const oppSnap = await getDocs(oppQ);
+
+    if (oppSnap.empty) {
+      console.log('Seeding initial live data into user Firestore collections...');
+      const batch = writeBatch(db);
+
+      defaults.opportunities.forEach((opp) => {
+        batch.set(doc(db, 'opportunities', opp.id), {
+          ...opp,
+          userId,
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      defaults.projects.forEach((proj) => {
+        batch.set(doc(db, 'projects', proj.id), {
+          ...proj,
+          userId,
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      defaults.paymentMethods.forEach((pm) => {
+        batch.set(doc(db, 'paymentMethods', pm.id), {
+          ...pm,
+          userId,
+          updatedAt: new Date().toISOString(),
+        });
+      });
+
+      await batch.commit();
+      return true;
+    }
+    return false;
+  } catch (error) {
+    console.warn('Initial seeding note:', error);
+    return false;
   }
 }
 
