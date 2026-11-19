@@ -28,7 +28,69 @@ data class AIProposalResult(
     val clientQuestions: List<String>
 )
 
+data class TranslatedJobResult(
+    val title: String,
+    val description: String,
+    val targetLang: String
+)
+
 class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app") {
+
+    suspend fun translateJob(
+        title: String,
+        description: String,
+        targetLang: String
+    ): Result<TranslatedJobResult> = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
+        try {
+            val url = URL("$baseUrl/api/translate")
+            connection = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                setRequestProperty("Accept", "application/json")
+                doOutput = true
+                doInput = true
+                connectTimeout = 20_000
+                readTimeout = 20_000
+            }
+
+            val payload = JSONObject().apply {
+                put("title", title)
+                put("description", description)
+                put("targetLang", targetLang)
+            }
+
+            OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+                writer.write(payload.toString())
+                writer.flush()
+            }
+
+            val responseCode = connection.responseCode
+            val responseStream = if (responseCode in 200..299) {
+                connection.inputStream
+            } else {
+                connection.errorStream ?: connection.inputStream
+            }
+
+            val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
+            if (responseCode !in 200..299) {
+                return@withContext Result.failure(Exception("HTTP Error $responseCode: $responseText"))
+            }
+
+            val json = JSONObject(responseText)
+            Result.success(
+                TranslatedJobResult(
+                    title = json.optString("title", title),
+                    description = json.optString("description", description),
+                    targetLang = json.optString("targetLang", targetLang)
+                )
+            )
+        } catch (e: Exception) {
+            Result.failure(e)
+        } finally {
+            connection?.disconnect()
+        }
+    }
 
     suspend fun analyzeText(text: String, analysisType: String = "comprehensive"): Result<AIAnalysisResult> = withContext(Dispatchers.IO) {
         var connection: HttpURLConnection? = null
