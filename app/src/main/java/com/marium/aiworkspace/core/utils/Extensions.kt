@@ -1,9 +1,13 @@
 package com.marium.aiworkspace.core.utils
 
-// Placeholder for common extension functions and helpers
+import java.util.Locale
+
 object Extensions {
-    // Example extension function
     fun String.capitalizeWords(): String {
-        return this.split(" ").joinToString(" ") { it.capitalize() }
+        return this.split(" ").joinToString(" ") { word ->
+            word.replaceFirstChar { ch ->
+                if (ch.isLowerCase()) ch.titlecase(Locale.getDefault()) else ch.toString()
+            }
+        }
     }
 }
