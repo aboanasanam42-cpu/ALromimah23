@@ -30,9 +30,8 @@ import { PaymentView } from './components/PaymentView';
 import { SettingsView } from './components/SettingsView';
 import { ProposalModal } from './components/ProposalModal';
 import { AIAssistantModal } from './components/AIAssistantModal';
-import { Plus, X, Briefcase, DollarSign, CheckCircle2 } from 'lucide-react';
+import { X, Briefcase, CheckCircle2 } from 'lucide-react';
 
-// Firebase imports
 import {
   auth,
   ensureAuth,
@@ -60,62 +59,108 @@ import {
   seedInitialDataIfEmpty
 } from './lib/firestoreService';
 
+// محافظك الحقيقية المفعّلة لاستلام الأرباح تلقائياً
+const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
+  {
+    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    id: 'pm-shamel-money',
+    name: 'شامل موني (Shamel Money)',
+    type: 'wallet' as any,
+    accountNumber: '771134103',
+    currency: 'YER',
+    balance: 0,
+    isDefault: true,
+    verified: true,
+  } as PaymentMethod,
+  {
+    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    id: 'pm-one-cash',
+    name: 'ون كاش (OneCash) - بديل: 146158879',
+    type: 'wallet' as any,
+    accountNumber: '730768718',
+    currency: 'YER',
+    balance: 0,
+    isDefault: false,
+    verified: true,
+  } as PaymentMethod,
+  {
+    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    id: 'pm-binance-trc20',
+    name: 'Binance USDT (TRC20)',
+    type: 'crypto' as any,
+    accountNumber: 'TBZjJKmePUGVT5tGwpQrfk6z7ZmSiJkTpv',
+    currency: 'USDT',
+    balance: 0,
+    isDefault: false,
+    verified: true,
+  } as PaymentMethod,
+  {
+    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    id: 'pm-binance-bep20',
+    name: 'Binance USDT (BEP20 / ERC20)',
+    type: 'crypto' as any,
+    accountNumber: '0x31ac47694c792a7c7d5ced4cc8dc31010b83c20a',
+    currency: 'USDT',
+    balance: 0,
+    isDefault: false,
+    verified: true,
+  } as PaymentMethod,
+  {
+    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    id: 'pm-binance-sol',
+    name: 'Binance USDT (Solana SOL)',
+    type: 'crypto' as any,
+    accountNumber: '85BcyhKTsFBvssX5PGm5uCjCK7kucBN7e2PTVfoDm8hj',
+    currency: 'USDT',
+    balance: 0,
+    isDefault: false,
+    verified: true,
+  } as PaymentMethod,
+];
+
 export function App() {
   const [language, setLanguage] = useState<Language>('ar');
   const [workMode, setWorkMode] = useState<WorkMode>('hybrid');
   const [activeTab, setActiveTab] = useState<NavigationTab>('dashboard');
 
-  // Firebase User Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [firebaseConnected, setFirebaseConnected] = useState<boolean>(false);
-  const [authLoading, setAuthLoading] = useState<boolean>(true);
-
-  // App Data State (Live from Firebase Firestore)
   const [opportunities, setOpportunities] = useState<Opportunity[]>(DEFAULT_SEED_OPPORTUNITIES);
   const [projects, setProjects] = useState<ActiveProject[]>(DEFAULT_SEED_PROJECTS);
-  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(DEFAULT_SEED_PAYMENT_METHODS);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(OWNER_DEFAULT_PAYMENT_METHODS);
   const [transactions, setTransactions] = useState(initialTransactions);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>(initialSyncLogs);
-  const [auditLogs, setAuditLogs] = useState(initialSecurityAudits);
+  const [auditLogs] = useState(initialSecurityAudits);
 
   const [selectedCategory, setSelectedCategory] = useState<OpportunityCategory | 'all'>('all');
   const [isSyncing, setIsSyncing] = useState(false);
   const [syncNotification, setSyncNotification] = useState<string | null>(null);
 
-  // Modals state
   const [proposalOpp, setProposalOpp] = useState<Opportunity | null>(null);
   const [showAIAssistant, setShowAIAssistant] = useState(false);
   const [showNewProjectModal, setShowNewProjectModal] = useState(false);
 
-  // New Project Form state
   const [newProjectTitle, setNewProjectTitle] = useState('');
   const [newProjectClient, setNewProjectClient] = useState('');
   const [newProjectCategory, setNewProjectCategory] = useState('التصميم والإعلانات');
   const [newProjectPayout, setNewProjectPayout] = useState<number>(200);
   const [newProjectDescription, setNewProjectDescription] = useState('');
 
-  // Synchronize document direction for Arabic RTL support
   useEffect(() => {
     document.documentElement.dir = language === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = language;
   }, [language]);
 
-  // Test Firebase connection, ensure authenticated user & monitor Auth state
   useEffect(() => {
-    testFirebaseConnection().then((connected) => {
-      setFirebaseConnected(connected);
-    });
-
+    testFirebaseConnection().catch(() => {});
     ensureAuth().catch((err) => console.warn('Auth init note:', err));
 
     const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      setAuthLoading(false);
       if (user) {
         await seedInitialDataIfEmpty(user.uid, {
           opportunities: DEFAULT_SEED_OPPORTUNITIES,
           projects: DEFAULT_SEED_PROJECTS,
-          paymentMethods: DEFAULT_SEED_PAYMENT_METHODS,
+          paymentMethods: OWNER_DEFAULT_PAYMENT_METHODS,
         });
 
         setSyncNotification(
@@ -130,52 +175,35 @@ export function App() {
     return () => unsubscribeAuth();
   }, [language]);
 
-  // Real-time Firestore Subscriptions when user is authenticated
   useEffect(() => {
     if (!currentUser) return;
-
     const uid = currentUser.uid;
 
     const unSubOpp = subscribeToOpportunities(uid, (data) => {
-      if (data.length > 0) {
-        setOpportunities(data);
-      }
+      if (data.length > 0) setOpportunities(data);
     });
-
     const unSubProj = subscribeToProjects(uid, (data) => {
-      if (data.length > 0) {
-        setProjects(data);
-      }
+      if (data.length > 0) setProjects(data);
     });
-
     const unSubPm = subscribeToPaymentMethods(uid, (data) => {
-      if (data.length > 0) {
-        setPaymentMethods(data);
-      }
+      if (data.length > 0) setPaymentMethods(data);
     });
-
     const unSubTx = subscribeToTransactions(uid, (data) => {
-      if (data.length > 0) {
-        setTransactions(data);
-      }
+      if (data.length > 0) setTransactions(data);
     });
-
     const unSubLogs = subscribeToSyncLogs(uid, (data) => {
-      if (data.length > 0) {
-        setSyncLogs(data);
-      }
+      if (data.length > 0) setSyncLogs(data);
     });
 
     return () => {
-      if (unSubOpp) unSubOpp();
-      if (unSubProj) unSubProj();
-      if (unSubPm) unSubPm();
-      if (unSubTx) unSubTx();
-      if (unSubLogs) unSubLogs();
+      unSubOpp?.();
+      unSubProj?.();
+      unSubPm?.();
+      unSubTx?.();
+      unSubLogs?.();
     };
   }, [currentUser]);
 
-  // Handle Login & Logout
   const handleLogin = async () => {
     try {
       await loginWithGoogle();
@@ -189,7 +217,7 @@ export function App() {
       await logoutUser();
       setOpportunities(DEFAULT_SEED_OPPORTUNITIES);
       setProjects(DEFAULT_SEED_PROJECTS);
-      setPaymentMethods(DEFAULT_SEED_PAYMENT_METHODS);
+      setPaymentMethods(OWNER_DEFAULT_PAYMENT_METHODS);
       setTransactions(initialTransactions);
       setSyncLogs(initialSyncLogs);
     } catch (err) {
@@ -197,13 +225,11 @@ export function App() {
     }
   };
 
-  // Upload and synchronize all local data to Cloud Firestore
   const handleUploadAllToCloud = async () => {
     if (!currentUser) {
       handleLogin();
       return;
     }
-
     setIsSyncing(true);
     try {
       const count = await syncAllToCloud(currentUser.uid, {
@@ -212,7 +238,6 @@ export function App() {
         paymentMethods,
         transactions,
       });
-
       const newLog: SyncLog = {
         id: `sync-${Date.now()}`,
         timestamp: new Date().toLocaleTimeString(),
@@ -222,7 +247,6 @@ export function App() {
         size: `${count} records`,
         details: `Firebase Firestore synchronized successfully in ${firebaseConfig.projectId}`,
       };
-
       await saveSyncLog(currentUser.uid, newLog);
       setSyncLogs((prev) => [newLog, ...prev]);
       setSyncNotification(language === 'ar' ? 'تمت مزامنة جميع البيانات مع سحابة Firebase بنجاح!' : 'All data synced with Firebase Cloud successfully!');
@@ -247,13 +271,8 @@ export function App() {
         size: `${opportunities.length + projects.length} records`,
         details: 'Firebase snapshot updated and synchronized successfully',
       };
-
       if (currentUser) {
-        try {
-          await saveSyncLog(currentUser.uid, newLog);
-        } catch (e) {
-          console.error(e);
-        }
+        await saveSyncLog(currentUser.uid, newLog).catch(console.error);
       }
       setSyncLogs((prev) => [newLog, ...prev]);
       setSyncNotification(language === 'ar' ? 'اكتملت المزامنة السحابية' : 'Cloud sync completed');
@@ -262,71 +281,44 @@ export function App() {
   };
 
   const handleAddOpportunity = async (newOpp: Opportunity) => {
-    setOpportunities([newOpp, ...opportunities]);
+    setOpportunities((prev) => [newOpp, ...prev]);
     if (currentUser) {
-      try {
-        await saveOpportunity(currentUser.uid, newOpp);
-      } catch (err) {
-        console.error('Firestore save failed:', err);
-      }
+      await saveOpportunity(currentUser.uid, newOpp).catch(console.error);
     }
   };
 
   const handleUpdateOpportunityStatus = async (id: string, status: OpportunityStatus) => {
-    setOpportunities((prev) =>
-      prev.map((opp) => (opp.id === id ? { ...opp, status } : opp))
-    );
+    setOpportunities((prev) => prev.map((opp) => (opp.id === id ? { ...opp, status } : opp)));
     if (currentUser) {
-      try {
-        await updateOpportunityStatusInCloud(currentUser.uid, id, status);
-      } catch (err) {
-        console.error('Firestore status update failed:', err);
-      }
+      await updateOpportunityStatusInCloud(currentUser.uid, id, status).catch(console.error);
     }
   };
 
   const handleAddPaymentMethod = async (newPm: PaymentMethod) => {
-    setPaymentMethods([newPm, ...paymentMethods]);
+    setPaymentMethods((prev) => [newPm, ...prev]);
     if (currentUser) {
-      try {
-        await savePaymentMethod(currentUser.uid, newPm);
-      } catch (err) {
-        console.error('Firestore save payment failed:', err);
-      }
+      await savePaymentMethod(currentUser.uid, newPm).catch(console.error);
     }
   };
 
   const handleUpdatePaymentMethod = async (updatedPm: PaymentMethod) => {
-    setPaymentMethods((prev) =>
-      prev.map((pm) => (pm.id === updatedPm.id ? updatedPm : pm))
-    );
+    setPaymentMethods((prev) => prev.map((pm) => (pm.id === updatedPm.id ? updatedPm : pm)));
     if (currentUser) {
-      try {
-        await savePaymentMethod(currentUser.uid, updatedPm);
-      } catch (err) {
-        console.error('Firestore update payment failed:', err);
-      }
+      await savePaymentMethod(currentUser.uid, updatedPm).catch(console.error);
     }
     setSyncNotification(
-      language === 'ar'
-        ? 'تم تحديث بيانات حساب بنك الكريمي بنجاح!'
-        : 'Bank account details updated successfully!'
+      language === 'ar' ? 'تم تحديث بيانات المحفظة بنجاح!' : 'Wallet details updated successfully!'
     );
     setTimeout(() => setSyncNotification(null), 4000);
   };
 
   const handleAddSyncLog = async (newLog: SyncLog) => {
-    setSyncLogs([newLog, ...syncLogs]);
+    setSyncLogs((prev) => [newLog, ...prev]);
     if (currentUser) {
-      try {
-        await saveSyncLog(currentUser.uid, newLog);
-      } catch (err) {
-        console.error('Firestore save log failed:', err);
-      }
+      await saveSyncLog(currentUser.uid, newLog).catch(console.error);
     }
   };
 
-  // Convert an accepted opportunity directly to an active project
   const handleSubmitApplication = async (oppId: string, customPrice: number) => {
     const targetOpp = opportunities.find((o) => o.id === oppId);
     if (!targetOpp) return;
@@ -341,52 +333,37 @@ export function App() {
       progress: 25,
       deadline: 'خلال 3 أيام',
       description: targetOpp.description,
-      deliverables: ['ملفات المخرجات بصيغة PDF / Figma / DOCX', 'تقرير الجودة والتدقيق النهائي'],
+      deliverables: ['ملفات المخرجات النهائية', 'تقرير الجودة والتدقيق'],
       steps: [
         { id: 'step-1', title: 'مراجعة المتطلبات واستلام المدخلات', completed: true },
         { id: 'step-2', title: 'البدء في تجهيز المسودة الأولى', completed: false },
-        { id: 'step-3', title: 'مراجعة الملاحظات وتنسيق التصميم', completed: false },
+        { id: 'step-3', title: 'مراجعة الملاحظات والتنسيق', completed: false },
         { id: 'step-4', title: 'التسليم النهائي واعتماد الدفع', completed: false },
       ],
     };
 
     setProjects((prev) => [newProject, ...prev]);
     handleUpdateOpportunityStatus(oppId, 'accepted');
-
     if (currentUser) {
-      try {
-        await saveProject(currentUser.uid, newProject);
-      } catch (e) {
-        console.error(e);
-      }
+      await saveProject(currentUser.uid, newProject).catch(console.error);
     }
-
     setActiveTab('projects');
   };
 
   const handleUpdateProjectProgress = async (projectId: string, stepId: string) => {
-    let updatedProject: ActiveProject | undefined;
+    const target = projects.find((p) => p.id === projectId);
+    if (!target) return;
+
+    const updatedSteps = target.steps.map((s) => (s.id === stepId ? { ...s, completed: !s.completed } : s));
+    const completedCount = updatedSteps.filter((s) => s.completed).length;
+    const progress = Math.round((completedCount / updatedSteps.length) * 100);
+
     setProjects((prev) =>
-      prev.map((p) => {
-        if (p.id !== projectId) return p;
-        const updatedSteps = p.steps.map((s) => (s.id === stepId ? { ...s, completed: !s.completed } : s));
-        const completedCount = updatedSteps.filter((s) => s.completed).length;
-        const progress = Math.round((completedCount / updatedSteps.length) * 100);
-        const res = { ...p, steps: updatedSteps, progress };
-        updatedProject = res;
-        return res;
-      })
+      prev.map((p) => (p.id === projectId ? { ...p, steps: updatedSteps, progress } : p))
     );
 
-    if (currentUser && updatedProject) {
-      try {
-        await updateProjectInCloud(currentUser.uid, projectId, {
-          steps: (updatedProject as ActiveProject).steps,
-          progress: (updatedProject as ActiveProject).progress,
-        });
-      } catch (e) {
-        console.error(e);
-      }
+    if (currentUser) {
+      await updateProjectInCloud(currentUser.uid, projectId, { steps: updatedSteps, progress }).catch(console.error);
     }
   };
 
@@ -394,40 +371,35 @@ export function App() {
     const proj = projects.find((p) => p.id === projectId);
     if (!proj) return;
 
-    // Credit payment into primary Kuraimi Bank account (3181903553)
     const payout = proj.payoutUSD;
-    let updatedPaymentMethods: PaymentMethod[] = [];
-    setPaymentMethods((prev) => {
-      const kuraimiIdx = prev.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
-      const targetIdx = kuraimiIdx >= 0 ? kuraimiIdx : 0;
-      const res = prev.map((pm, idx) => (idx === targetIdx ? { ...pm, balance: pm.balance + payout } : pm));
-      updatedPaymentMethods = res;
-      return res;
-    });
+    const targetIdx = paymentMethods.findIndex((pm) => pm.isDefault);
+    const resolvedIdx = targetIdx >= 0 ? targetIdx : 0;
+    const targetWallet = paymentMethods[resolvedIdx];
+    const updatedWallet = targetWallet ? { ...targetWallet, balance: targetWallet.balance + payout } : null;
+
+    if (updatedWallet) {
+      setPaymentMethods((prev) => prev.map((pm, idx) => (idx === resolvedIdx ? updatedWallet : pm)));
+    }
 
     const newTx = {
       id: `tx-${Date.now()}`,
       amount: payout,
       currency: 'USD',
-      description: `استلام أرباح إنجاز مشروع: ${proj.title} (تحويل لحساب بنك الكريمي: 3181903553)`,
+      description: `استلام أرباح مشروع: ${proj.title} -> ${updatedWallet?.name || 'المحفظة الافتراضية'} (${updatedWallet?.accountNumber || '771134103'})`,
       date: new Date().toISOString().split('T')[0],
       status: 'completed' as const,
       type: 'payout' as const,
     };
 
     setTransactions((prev) => [newTx, ...prev]);
-
-    setProjects((prev) =>
-      prev.map((p) => (p.id === projectId ? { ...p, status: 'paid', progress: 100 } : p))
-    );
+    setProjects((prev) => prev.map((p) => (p.id === projectId ? { ...p, status: 'paid', progress: 100 } : p)));
 
     if (currentUser) {
       try {
         await updateProjectInCloud(currentUser.uid, projectId, { status: 'paid', progress: 100 });
         await saveTransaction(currentUser.uid, newTx);
-        const targetPm = updatedPaymentMethods.find((pm) => pm.accountNumber === '3181903553') || updatedPaymentMethods[0];
-        if (targetPm) {
-          await savePaymentMethod(currentUser.uid, targetPm);
+        if (updatedWallet) {
+          await savePaymentMethod(currentUser.uid, updatedWallet);
         }
       } catch (e) {
         console.error(e);
@@ -436,36 +408,30 @@ export function App() {
 
     setSyncNotification(
       language === 'ar'
-        ? `تم تسليم المشروع وقيد $${payout} في حسابك الجاري ببنك الكريمي 3181903553 بنجاح!`
-        : `Project delivered! $${payout} credited to Al-Kuraimi Account 3181903553.`
+        ? `تم تسليم المشروع وقيد $${payout} في محفظتك (${updatedWallet?.name || 'شامل موني'}) بنجاح!`
+        : `Project delivered! $${payout} credited to your wallet.`
     );
     setTimeout(() => setSyncNotification(null), 5000);
-
     setActiveTab('payments');
   };
 
   const handleWithdrawToKuraimi = async (amount: number, currency: string, note?: string) => {
-    let updatedTargetPm: PaymentMethod | undefined;
+    const targetIdx = paymentMethods.findIndex((pm) => pm.isDefault);
+    const resolvedIdx = targetIdx >= 0 ? targetIdx : 0;
+    const targetWallet = paymentMethods[resolvedIdx];
+    const updatedWallet = targetWallet
+      ? { ...targetWallet, balance: Math.max(0, targetWallet.balance - amount) }
+      : null;
 
-    setPaymentMethods((prev) => {
-      const kuraimiIdx = prev.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
-      const targetIdx = kuraimiIdx >= 0 ? kuraimiIdx : 0;
-      return prev.map((pm, idx) => {
-        if (idx === targetIdx) {
-          const newBal = Math.max(0, pm.balance - amount);
-          const updated = { ...pm, balance: newBal };
-          updatedTargetPm = updated;
-          return updated;
-        }
-        return pm;
-      });
-    });
+    if (updatedWallet) {
+      setPaymentMethods((prev) => prev.map((pm, idx) => (idx === resolvedIdx ? updatedWallet : pm)));
+    }
 
     const newTx = {
-      id: `tx-kimb-${Date.now()}`,
+      id: `tx-wd-${Date.now()}`,
       amount: -amount,
       currency: currency || 'USD',
-      description: `سحب نقدي فوري لحساب بنك الكريمي رقم: 3181903553 (${note || 'سحب أرباح'})`,
+      description: `سحب إلى ${updatedWallet?.name || 'شامل موني'} (${updatedWallet?.accountNumber || '771134103'}) - ${note || 'سحب أرباح'}`,
       date: new Date().toISOString().split('T')[0],
       status: 'completed' as const,
       type: 'withdrawal' as const,
@@ -476,8 +442,8 @@ export function App() {
     if (currentUser) {
       try {
         await saveTransaction(currentUser.uid, newTx);
-        if (updatedTargetPm) {
-          await savePaymentMethod(currentUser.uid, updatedTargetPm);
+        if (updatedWallet) {
+          await savePaymentMethod(currentUser.uid, updatedWallet);
         }
       } catch (err) {
         console.error('Failed to sync withdrawal transaction:', err);
@@ -486,8 +452,8 @@ export function App() {
 
     setSyncNotification(
       language === 'ar'
-        ? `تم سحب وتحويل $${amount} فورياً إلى حساب بنك الكريمي رقم 3181903553 بنجاح!`
-        : `Successfully withdrew $${amount} to Kuraimi Bank account 3181903553!`
+        ? `تم تسجيل سحب $${amount} إلى ${updatedWallet?.name || 'محفظتك'} بنجاح!`
+        : `Successfully recorded withdrawal of $${amount}!`
     );
     setTimeout(() => setSyncNotification(null), 5000);
   };
@@ -521,19 +487,13 @@ export function App() {
     setNewProjectDescription('');
 
     if (currentUser) {
-      try {
-        await saveProject(currentUser.uid, newProj);
-      } catch (err) {
-        console.error(err);
-      }
+      await saveProject(currentUser.uid, newProj).catch(console.error);
     }
-
     setActiveTab('projects');
   };
 
   return (
     <div className="min-h-screen bg-[#0a071f] text-slate-100 flex flex-col font-sans selection:bg-purple-500 selection:text-white">
-      {/* Sync Toast Notification */}
       {syncNotification && (
         <div className="fixed bottom-16 sm:bottom-6 right-6 z-50 bg-purple-900 border border-purple-400/50 text-white px-4 py-2.5 rounded-2xl shadow-2xl flex items-center gap-2.5 text-xs font-bold animate-bounce">
           <CheckCircle2 className="w-4 h-4 text-emerald-400" />
@@ -541,7 +501,6 @@ export function App() {
         </div>
       )}
 
-      {/* Top Header Bar */}
       <Header
         language={language}
         onLanguageChange={setLanguage}
@@ -554,7 +513,6 @@ export function App() {
         onLogout={handleLogout}
       />
 
-      {/* Top Desktop & Bottom Mobile Navigation Bar */}
       <Navigation
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -562,7 +520,6 @@ export function App() {
         onOpenCenterAction={() => setShowAIAssistant(true)}
       />
 
-      {/* Main App Content Body */}
       <main className="flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 py-4 sm:py-6">
         {activeTab === 'dashboard' && (
           <DashboardView
@@ -576,9 +533,7 @@ export function App() {
             onOpenNewProjectModal={() => setShowNewProjectModal(true)}
             onSelectCategoryFilter={(catKey) => {
               setSelectedCategory(catKey);
-              if (catKey !== 'all') {
-                setActiveTab('opportunities');
-              }
+              if (catKey !== 'all') setActiveTab('opportunities');
             }}
             selectedCategory={selectedCategory}
           />
@@ -603,9 +558,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'ai-analyzer' && (
-          <AIAnalyzerView language={language} />
-        )}
+        {activeTab === 'ai-analyzer' && <AIAnalyzerView language={language} />}
 
         {activeTab === 'payments' && (
           <PaymentView
@@ -632,12 +585,7 @@ export function App() {
           />
         )}
 
-        {activeTab === 'security' && (
-          <SecurityView
-            language={language}
-            auditLogs={auditLogs}
-          />
-        )}
+        {activeTab === 'security' && <SecurityView language={language} auditLogs={auditLogs} />}
 
         {activeTab === 'settings' && (
           <SettingsView
@@ -649,7 +597,6 @@ export function App() {
         )}
       </main>
 
-      {/* Proposal & Application Generation Modal */}
       {proposalOpp && (
         <ProposalModal
           opportunity={proposalOpp}
@@ -659,7 +606,6 @@ export function App() {
         />
       )}
 
-      {/* Floating AI Assistant Chat Modal */}
       {showAIAssistant && (
         <AIAssistantModal
           language={language}
@@ -668,7 +614,6 @@ export function App() {
         />
       )}
 
-      {/* Add New Project Modal */}
       {showNewProjectModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-[#151034] border border-purple-500/30 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-white space-y-4 animate-fadeIn">
@@ -772,7 +717,6 @@ export function App() {
         </div>
       )}
 
-      {/* Footer */}
       <footer className="bg-[#0a071f] border-t border-purple-500/20 py-5 px-4 text-center text-xs text-purple-200/60 font-medium mb-12 sm:mb-0">
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2">
           <div>
