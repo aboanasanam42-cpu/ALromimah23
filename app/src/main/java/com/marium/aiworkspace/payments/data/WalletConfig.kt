@@ -6,11 +6,19 @@ data class PaymentWallet(
     val accountNumber: String,
     val altAccountNumber: String? = null,
     val network: String? = null,
-    val currency: String
+    val currency: String,
+    val isDefault: Boolean = false
 )
 
 object WalletConfig {
     val activeWallets = listOf(
+        PaymentWallet(
+            id = "kuraimi-bank-usd",
+            title = "بنك الكريمي (جاري - تعز)",
+            accountNumber = "3181903553",
+            currency = "USD",
+            isDefault = true
+        ),
         PaymentWallet(
             id = "shamel-money-ye",
             title = "شامل موني",
