@@ -20,6 +20,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
     const activeWallets = OWNER_WALLETS.filter((w) => w.isActive);
     return res.status(200).json({
       success: true,
+      count: activeWallets.length,
       wallets: activeWallets,
     });
   }
@@ -43,10 +44,14 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
       return res.status(200).json({
         success: true,
         status: 'recorded',
+        walletId: targetWallet.id,
+        label: targetWallet.nameAr,
         destination: targetWallet.accountNumber,
         altDestination: targetWallet.altAccountNumber || null,
+        email: targetWallet.email || null,
         provider: targetWallet.provider,
-        network: targetWallet.network || 'LOCAL_YE',
+        network: targetWallet.networkLabel || targetWallet.network || 'LOCAL_YE',
+        minDeposit: targetWallet.minDepositLabel || null,
         currency: targetWallet.currency,
         amount: Number(amount),
         reference: txHashOrRef,

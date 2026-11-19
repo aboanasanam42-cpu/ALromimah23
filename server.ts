@@ -2,6 +2,7 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { OWNER_WALLETS } from "./src/config/wallets";
 
 async function startServer() {
   const app = express();
@@ -297,6 +298,101 @@ Return ONLY a valid JSON object matching this structure (no markdown fences arou
   });
 
   // Opportunity Repository Endpoints (Port of Kotlin OpportunityRepository)
+
+  app.get("/api/payout/wallets", (_req, res) => {
+    const activeWallets = OWNER_WALLETS.filter((w) => w.isActive);
+    res.json({ success: true, count: activeWallets.length, wallets: activeWallets });
+  });
+
+  app.post("/api/payout/wallets", (req, res) => {
+    const { walletId, amount, txHashOrRef } = req.body || {};
+    const targetWallet = OWNER_WALLETS.find((w) => w.id === walletId);
+    if (!targetWallet) {
+      return res.status(400).json({ success: false, error: "المحفظة أو الحساب المختار غير صالح" });
+    }
+    if (!amount || Number(amount) <= 0 || !txHashOrRef) {
+      return res.status(400).json({
+        success: false,
+        error: "يرجى إدخال المبلغ ورقم المرجع أو هاش المعاملة (TxHash)",
+      });
+    }
+    return res.json({
+      success: true,
+      status: "recorded",
+      walletId: targetWallet.id,
+      label: targetWallet.nameAr,
+      destination: targetWallet.accountNumber,
+      altDestination: targetWallet.altAccountNumber || null,
+      email: targetWallet.email || null,
+      provider: targetWallet.provider,
+      network: targetWallet.networkLabel || targetWallet.network || "LOCAL_YE",
+      minDeposit: targetWallet.minDepositLabel || null,
+      currency: targetWallet.currency,
+      amount: Number(amount),
+      reference: txHashOrRef,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
+  app.post("/api/translate", async (req, res) => {
+    try {
+      const { title = "", description = "", targetLang = "ar" } = req.body || {};
+      if (!String(title).trim() && !String(description).trim()) {
+        return res.status(400).json({ success: false, error: "يرجى إرسال عنوان الوظيفة أو وصفها للترجمة" });
+      }
+      const langCode: "ar" | "en" = targetLang === "en" ? "en" : "ar";
+      const apiKey = process.env.GEMINI_API_KEY;
+      if (apiKey) {
+        try {
+          const ai = new GoogleGenAI({ apiKey });
+          const prompt =
+            langCode === "ar"
+              ? `ترجم عنوان الوظيفة ووصفها التاليين إلى اللغة العربية الفصحى المهنية بأسلوب واضح ومباشر. أعد النتيجة بصيغة JSON فقط بهذا الشكل: {"title": "...", "description": "..."}\n\nTitle: ${title}\nDescription: ${description}`
+              : `Translate the following remote job title and description into clear, professional English. Return ONLY valid JSON in this exact format: {"title": "...", "description": "..."}\n\nTitle: ${title}\nDescription: ${description}`;
+          const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json" },
+          });
+          const parsed = JSON.parse(response.text || "{}") as { title?: string; description?: string };
+          if (parsed.title || parsed.description) {
+            return res.json({
+              success: true,
+              targetLang: langCode,
+              title: parsed.title || title,
+              description: parsed.description || description,
+            });
+          }
+        } catch {
+          // fallback below
+        }
+      }
+      const fallback = async (txt: string): Promise<string> => {
+        if (!txt.trim()) return txt;
+        const r = await fetch(
+          `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${langCode}&dt=t&q=${encodeURIComponent(txt)}`
+        );
+        if (!r.ok) return txt;
+        const d = (await r.json()) as unknown[];
+        const segs = Array.isArray(d?.[0]) ? (d[0] as unknown[][]) : [];
+        return segs.map((s) => (typeof s?.[0] === "string" ? s[0] : "")).join("") || txt;
+      };
+      const [translatedTitle, translatedDescription] = await Promise.all([
+        fallback(String(title)),
+        fallback(String(description)),
+      ]);
+      return res.json({
+        success: true,
+        targetLang: langCode,
+        title: translatedTitle,
+        description: translatedDescription,
+      });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Translation error";
+      return res.status(500).json({ success: false, error: message });
+    }
+  });
+
   app.get("/api/opportunities", (req, res) => {
     res.json({
       success: true,

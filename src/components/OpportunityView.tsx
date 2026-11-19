@@ -629,15 +629,16 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                               <span>🇺🇸 English</span>
                               {displayed.mode === 'en' && <Check className="w-3.5 h-3.5 text-sky-600" />}
                             </button>
-                            {displayed.mode !== 'original' && (
-                              <button
-                                type="button"
-                                onClick={(e) => handleTranslateJob(opp, 'original', e)}
-                                className="w-full px-3 py-1.5 text-right text-[11px] text-slate-500 hover:bg-slate-50 border-t border-slate-100"
-                              >
-                                {language === 'ar' ? 'النص الأصلي' : 'Original Text'}
-                              </button>
-                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => handleTranslateJob(opp, 'original', e)}
+                              className={`w-full px-3 py-1.5 text-right text-[11px] flex items-center justify-between hover:bg-slate-50 border-t border-slate-100 ${
+                                displayed.mode === 'original' ? 'text-sky-700 bg-sky-50/60 font-bold' : 'text-slate-500'
+                              }`}
+                            >
+                              <span>{language === 'ar' ? 'النص الأصلي' : 'Original Text'}</span>
+                              {displayed.mode === 'original' && <Check className="w-3.5 h-3.5 text-sky-600" />}
+                            </button>
                           </div>
                         )}
                       </div>
@@ -836,15 +837,17 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                       >
                         🇺🇸 English
                       </button>
-                      {displayedDetail.mode !== 'original' && (
-                        <button
-                          type="button"
-                          onClick={(e) => handleTranslateJob(selectedOpp, 'original', e)}
-                          className="px-2 py-0.5 rounded text-[11px] font-bold text-slate-500 hover:bg-white"
-                        >
-                          {language === 'ar' ? 'الأصل' : 'Original'}
-                        </button>
-                      )}
+                      <button
+                        type="button"
+                        onClick={(e) => handleTranslateJob(selectedOpp, 'original', e)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                          displayedDetail.mode === 'original'
+                            ? 'bg-slate-700 text-white'
+                            : 'text-slate-500 hover:bg-white'
+                        }`}
+                      >
+                        {language === 'ar' ? 'النص الأصلي' : 'Original Text'}
+                      </button>
                     </div>
                   </div>
 

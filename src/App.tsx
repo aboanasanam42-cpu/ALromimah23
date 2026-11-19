@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { OWNER_WALLETS } from './config/wallets';
 import {
   Language,
   WorkMode,
@@ -59,73 +60,36 @@ import {
   seedInitialDataIfEmpty
 } from './lib/firestoreService';
 
-const BASE_PM_TEMPLATE = DEFAULT_SEED_PAYMENT_METHODS[0] || ({} as PaymentMethod);
+const PROVIDER_LABELS: Record<string, string> = {
+  kuraimi_bank: 'بنك الكريمي للتمويل الأصغر الإسلامي',
+  shamel_money: 'شامل موني (Shamel Money)',
+  one_cash: 'ون كاش (OneCash)',
+  binance_usdt: 'Binance USDT',
+};
 
-const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
-  {
-    ...BASE_PM_TEMPLATE,
-    id: 'pm-kuraimi-usd',
-    name: 'بنك الكريمي للتمويل الأصغر الإسلامي (جاري - تعز)',
-    accountNumber: '3181903553',
-    currency: 'USD',
-    balance: 0,
-    isDefault: true,
-  },
-  {
-    ...BASE_PM_TEMPLATE,
-    id: 'pm-shamel-money',
-    name: 'شامل موني (Shamel Money)',
-    accountNumber: '771134103',
-    currency: 'YER',
-    balance: 0,
-    isDefault: false,
-  },
-  {
-    ...BASE_PM_TEMPLATE,
-    id: 'pm-one-cash',
-    name: 'ون كاش (OneCash) - الحساب البديل: 146158879',
-    accountNumber: '730768718',
-    currency: 'YER',
-    balance: 0,
-    isDefault: false,
-  },
-  {
-    ...BASE_PM_TEMPLATE,
-    id: 'pm-binance-trc20',
-    name: 'Binance USDT (Tron TRC20)',
-    accountNumber: 'TBZjJKmePUGVT5tGwpQrfk6z7ZmSiJkTpv',
-    currency: 'USDT',
-    balance: 0,
-    isDefault: false,
-  },
-  {
-    ...BASE_PM_TEMPLATE,
-    id: 'pm-binance-bep20',
-    name: 'Binance USDT (BNB Smart Chain BEP20)',
-    accountNumber: '0x31ac47694c792a7c7d5ced4cc8dc31010b83c20a',
-    currency: 'USDT',
-    balance: 0,
-    isDefault: false,
-  },
-  {
-    ...BASE_PM_TEMPLATE,
-    id: 'pm-binance-erc20',
-    name: 'Binance USDT (Ethereum ERC20)',
-    accountNumber: '0x31ac47694c792a7c7d5ced4cc8dc31010b83c20a',
-    currency: 'USDT',
-    balance: 0,
-    isDefault: false,
-  },
-  {
-    ...BASE_PM_TEMPLATE,
-    id: 'pm-binance-sol',
-    name: 'Binance USDT (Solana SOL)',
-    accountNumber: '85BcyhKTsFBvssX5PGm5uCjCK7kucBN7e2PTVfoDm8hj',
-    currency: 'USDT',
-    balance: 0,
-    isDefault: false,
-  },
-];
+const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = OWNER_WALLETS.map((wallet) => ({
+  id: wallet.id,
+  type: wallet.provider === 'kuraimi_bank' ? 'bank' : 'wallet',
+  name: wallet.nameAr,
+  provider: wallet.networkLabel ? `${PROVIDER_LABELS[wallet.provider]} - ${wallet.networkLabel}` : PROVIDER_LABELS[wallet.provider],
+  accountNumber: wallet.accountNumber,
+  balance: 0,
+  currency: wallet.currency,
+  isDefault: Boolean(wallet.isDefault),
+}));
+
+function mergeOfficialWallets(cloudMethods: PaymentMethod[]): PaymentMethod[] {
+  const merged = [...cloudMethods];
+  for (const official of OWNER_DEFAULT_PAYMENT_METHODS) {
+    const exists = merged.some(
+      (pm) => pm.id === official.id || pm.accountNumber === official.accountNumber
+    );
+    if (!exists) {
+      merged.push(official);
+    }
+  }
+  return merged;
+}
 
 export function App() {
   const [language, setLanguage] = useState<Language>('ar');
@@ -136,6 +100,30 @@ export function App() {
   const [opportunities, setOpportunities] = useState<Opportunity[]>(DEFAULT_SEED_OPPORTUNITIES);
   const [projects, setProjects] = useState<ActiveProject[]>(DEFAULT_SEED_PROJECTS);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>(OWNER_DEFAULT_PAYMENT_METHODS);
+  const paymentMethodsRef = useRef<PaymentMethod[]>(OWNER_DEFAULT_PAYMENT_METHODS);
+
+  const updatePaymentMethodsState = (updater: (prev: PaymentMethod[]) => PaymentMethod[]): PaymentMethod[] => {
+    const next = updater(paymentMethodsRef.current);
+    paymentMethodsRef.current = next;
+    setPaymentMethods(next);
+    return next;
+  };
+
+  const applyPrimaryWalletDelta = (delta: number): PaymentMethod | null => {
+    const current = paymentMethodsRef.current;
+    const targetIdx = current.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
+    const resolvedIdx = targetIdx >= 0 ? targetIdx : 0;
+    const targetWallet = current[resolvedIdx];
+    if (!targetWallet) return null;
+    const updatedWallet: PaymentMethod = {
+      ...targetWallet,
+      balance: Number(Math.max(0, targetWallet.balance + delta).toFixed(2)),
+    };
+    const next = current.map((pm, idx) => (idx === resolvedIdx ? updatedWallet : pm));
+    paymentMethodsRef.current = next;
+    setPaymentMethods(next);
+    return updatedWallet;
+  };
   const [transactions, setTransactions] = useState(initialTransactions);
   const [syncLogs, setSyncLogs] = useState<SyncLog[]>(initialSyncLogs);
   const [auditLogs] = useState(initialSecurityAudits);
@@ -195,7 +183,11 @@ export function App() {
       if (data.length > 0) setProjects(data);
     });
     const unSubPm = subscribeToPaymentMethods(uid, (data) => {
-      if (data.length > 0) setPaymentMethods(data);
+      if (data.length > 0) {
+        const merged = mergeOfficialWallets(data);
+        paymentMethodsRef.current = merged;
+        setPaymentMethods(merged);
+      }
     });
     const unSubTx = subscribeToTransactions(uid, (data) => {
       if (data.length > 0) setTransactions(data);
@@ -226,6 +218,7 @@ export function App() {
       await logoutUser();
       setOpportunities(DEFAULT_SEED_OPPORTUNITIES);
       setProjects(DEFAULT_SEED_PROJECTS);
+      paymentMethodsRef.current = OWNER_DEFAULT_PAYMENT_METHODS;
       setPaymentMethods(OWNER_DEFAULT_PAYMENT_METHODS);
       setTransactions(initialTransactions);
       setSyncLogs(initialSyncLogs);
@@ -308,14 +301,14 @@ export function App() {
   };
 
   const handleAddPaymentMethod = async (newPm: PaymentMethod) => {
-    setPaymentMethods((prev) => [newPm, ...prev]);
+    updatePaymentMethodsState((prev) => [newPm, ...prev]);
     if (currentUser) {
       await savePaymentMethod(currentUser.uid, newPm).catch(console.error);
     }
   };
 
   const handleUpdatePaymentMethod = async (updatedPm: PaymentMethod) => {
-    setPaymentMethods((prev) => prev.map((pm) => (pm.id === updatedPm.id ? updatedPm : pm)));
+    updatePaymentMethodsState((prev) => prev.map((pm) => (pm.id === updatedPm.id ? updatedPm : pm)));
     if (currentUser) {
       await savePaymentMethod(currentUser.uid, updatedPm).catch(console.error);
     }
@@ -385,14 +378,7 @@ export function App() {
     if (!proj) return;
 
     const payout = proj.payoutUSD;
-    const targetIdx = paymentMethods.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
-    const resolvedIdx = targetIdx >= 0 ? targetIdx : 0;
-    const targetWallet = paymentMethods[resolvedIdx];
-    const updatedWallet = targetWallet ? { ...targetWallet, balance: targetWallet.balance + payout } : null;
-
-    if (updatedWallet) {
-      setPaymentMethods((prev) => prev.map((pm, idx) => (idx === resolvedIdx ? updatedWallet : pm)));
-    }
+    const updatedWallet = applyPrimaryWalletDelta(payout);
 
     const newTx = {
       id: `tx-${Date.now()}`,
@@ -429,16 +415,7 @@ export function App() {
   };
 
   const handleWithdrawToKuraimi = async (amount: number, currency: string, note?: string) => {
-    const targetIdx = paymentMethods.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
-    const resolvedIdx = targetIdx >= 0 ? targetIdx : 0;
-    const targetWallet = paymentMethods[resolvedIdx];
-    const updatedWallet = targetWallet
-      ? { ...targetWallet, balance: Math.max(0, targetWallet.balance - amount) }
-      : null;
-
-    if (updatedWallet) {
-      setPaymentMethods((prev) => prev.map((pm, idx) => (idx === resolvedIdx ? updatedWallet : pm)));
-    }
+    const updatedWallet = applyPrimaryWalletDelta(-amount);
 
     const newTx = {
       id: `tx-kimb-${Date.now()}`,

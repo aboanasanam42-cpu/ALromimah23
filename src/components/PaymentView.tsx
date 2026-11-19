@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { PaymentMethod, Transaction, Language } from '../types';
 import { t } from '../utils/localization';
+import { OWNER_WALLETS } from '../config/wallets';
 import {
   CreditCard,
   Building2,
@@ -61,6 +62,22 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
   // Currency display toggle for Kuraimi card
   const [displayCurrency, setDisplayCurrency] = useState<'USD' | 'YER' | 'SAR'>('USD');
   const [copiedAccount, setCopiedAccount] = useState(false);
+  const [copiedFieldKey, setCopiedFieldKey] = useState<string | null>(null);
+
+  const handleCopyField = async (value: string, key: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
+    setCopiedFieldKey(key);
+    setTimeout(() => setCopiedFieldKey((prev) => (prev === key ? null : prev)), 2000);
+  };
 
   const kuraimiAccount = paymentMethods.find(
     (pm) => pm.accountNumber === '3181903553' || pm.provider.includes('الكريمي')
@@ -409,6 +426,208 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
         </div>
       </div>
 
+      {/* Official Verified Payout & Deposit Wallets */}
+      <div className="bg-white rounded-3xl p-5 sm:p-6 border border-slate-200 shadow-xs space-y-4 text-slate-900">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h3 className="text-sm sm:text-base font-black text-slate-900 flex items-center gap-2">
+              <Coins className="w-5 h-5 text-emerald-600" />
+              <span>
+                {language === 'ar'
+                  ? 'الحسابات والمحافظ الرسمية المعتمدة للاستلام والإيداع (7 حسابات)'
+                  : 'Official Verified Payout & Deposit Accounts (7 Wallets)'}
+              </span>
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              {language === 'ar'
+                ? 'انسخ رقم الحساب أو عنوان محفظة Binance USDT مباشرة بضغطة واحدة'
+                : 'Copy any bank account, local wallet, or Binance USDT deposit address with one click'}
+            </p>
+          </div>
+          <span className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-extrabold self-start sm:self-auto">
+            {OWNER_WALLETS.length} {language === 'ar' ? 'قنوات مفعّلة' : 'Active Channels'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {OWNER_WALLETS.map((wallet) => {
+            const isCrypto = wallet.provider === 'binance_usdt';
+            const isBank = wallet.provider === 'kuraimi_bank';
+            const mainCopyKey = `official-main-${wallet.id}`;
+            const altCopyKey = `official-alt-${wallet.id}`;
+            const emailCopyKey = `official-email-${wallet.id}`;
+
+            return (
+              <div
+                key={wallet.id}
+                className={`rounded-2xl p-4 border transition-all space-y-3 ${
+                  wallet.isDefault
+                    ? 'bg-emerald-50/60 border-emerald-400 ring-1 ring-emerald-400/30'
+                    : isCrypto
+                    ? 'bg-amber-50/40 border-amber-200/80 hover:border-amber-400'
+                    : 'bg-slate-50/80 border-slate-200 hover:border-emerald-300'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`p-2 rounded-xl shrink-0 ${
+                        isBank
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : isCrypto
+                          ? 'bg-amber-100 text-amber-800'
+                          : 'bg-sky-100 text-sky-800'
+                      }`}
+                    >
+                      {isBank ? (
+                        <Building2 className="w-5 h-5" />
+                      ) : isCrypto ? (
+                        <Coins className="w-5 h-5" />
+                      ) : (
+                        <Wallet className="w-5 h-5" />
+                      )}
+                    </div>
+                    <div>
+                      <h4 className="text-xs sm:text-sm font-black text-slate-900">
+                        {language === 'ar' ? wallet.nameAr : wallet.nameEn}
+                      </h4>
+                      <div className="flex flex-wrap items-center gap-1.5 mt-1">
+                        <span className="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-[10px] font-extrabold text-slate-700">
+                          {wallet.currency}
+                        </span>
+                        {wallet.networkLabel && (
+                          <span className="px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 text-[10px] font-extrabold">
+                            {wallet.networkLabel}
+                          </span>
+                        )}
+                        {wallet.minDepositLabel && (
+                          <span className="px-2 py-0.5 rounded-md bg-slate-200/80 text-slate-700 text-[10px] font-bold">
+                            {language === 'ar' ? `الحد الأدنى: ${wallet.minDepositLabel}` : `Min: ${wallet.minDepositLabel}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {wallet.isDefault && (
+                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-600 text-white text-[10px] font-black shrink-0">
+                      {language === 'ar' ? 'افتراضي / رئيسي' : 'Primary'}
+                    </span>
+                  )}
+                </div>
+
+                {/* Primary Account / Deposit Address */}
+                <div className="bg-white rounded-xl p-2.5 border border-slate-200 flex items-center justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className="text-[10px] font-bold text-slate-400 block">
+                      {isCrypto
+                        ? language === 'ar'
+                          ? 'عنوان الإيداع (Deposit Address)'
+                          : 'Deposit Address'
+                        : language === 'ar'
+                        ? 'رقم الحساب / الهاتف'
+                        : 'Account / Phone Number'}
+                    </span>
+                    <div
+                      dir="ltr"
+                      className="font-mono text-xs font-extrabold text-slate-900 break-all select-all"
+                    >
+                      {wallet.accountNumber}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyField(wallet.accountNumber, mainCopyKey)}
+                    className="px-2.5 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 text-[11px] font-extrabold flex items-center gap-1 shrink-0 transition-all"
+                  >
+                    {copiedFieldKey === mainCopyKey ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                        <span>{language === 'ar' ? 'تم النسخ' : 'Copied'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>{language === 'ar' ? 'نسخ' : 'Copy'}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Alternative Account Number (OneCash) */}
+                {wallet.altAccountNumber && (
+                  <div className="bg-white rounded-xl p-2.5 border border-slate-200 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-slate-400 block">
+                        {language === 'ar' ? 'رقم الحساب البديل' : 'Alternative Account Number'}
+                      </span>
+                      <div dir="ltr" className="font-mono text-xs font-extrabold text-slate-900 select-all">
+                        {wallet.altAccountNumber}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyField(wallet.altAccountNumber!, altCopyKey)}
+                      className="px-2.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-[11px] font-extrabold flex items-center gap-1 shrink-0 transition-all"
+                    >
+                      {copiedFieldKey === altCopyKey ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>{language === 'ar' ? 'تم النسخ' : 'Copied'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>{language === 'ar' ? 'نسخ' : 'Copy'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Email (Shamel Money) */}
+                {wallet.email && (
+                  <div className="bg-white rounded-xl p-2.5 border border-slate-200 flex items-center justify-between gap-2">
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] font-bold text-slate-400 block">
+                        {language === 'ar' ? 'البريد الإلكتروني المرتبط' : 'Linked Email'}
+                      </span>
+                      <div dir="ltr" className="font-mono text-xs font-bold text-slate-800 break-all select-all">
+                        {wallet.email}
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyField(wallet.email!, emailCopyKey)}
+                      className="px-2.5 py-1.5 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-[11px] font-extrabold flex items-center gap-1 shrink-0 transition-all"
+                    >
+                      {copiedFieldKey === emailCopyKey ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          <span>{language === 'ar' ? 'تم النسخ' : 'Copied'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>{language === 'ar' ? 'نسخ' : 'Copy'}</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                )}
+
+                {/* Note (e.g. Solana Case-sensitive warning) */}
+                {(wallet.noteAr || wallet.noteEn) && (
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-rose-700 bg-rose-50 px-2.5 py-1.5 rounded-lg border border-rose-200">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{language === 'ar' ? wallet.noteAr : wallet.noteEn}</span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Connected Accounts & Wallets */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
@@ -460,8 +679,20 @@ export const PaymentView: React.FC<PaymentViewProps> = ({
                 <div>
                   <h4 className="text-sm font-bold text-slate-900">{pm.name}</h4>
                   <p className="text-xs text-slate-500 font-medium">{pm.provider}</p>
-                  <div className="text-xs font-mono font-bold text-slate-700 mt-1 flex items-center gap-1.5">
-                    <span>{pm.accountNumber}</span>
+                  <div className="text-xs font-mono font-bold text-slate-700 mt-1 flex items-center justify-between gap-1.5">
+                    <span className="break-all">{pm.accountNumber}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyField(pm.accountNumber, `pm-${pm.id}`)}
+                      className="p-1 rounded-md hover:bg-slate-100 text-slate-500 hover:text-emerald-700 shrink-0"
+                      title={language === 'ar' ? 'نسخ رقم الحساب' : 'Copy account'}
+                    >
+                      {copiedFieldKey === `pm-${pm.id}` ? (
+                        <Check className="w-3.5 h-3.5 text-emerald-600" />
+                      ) : (
+                        <Copy className="w-3.5 h-3.5" />
+                      )}
+                    </button>
                     {isKuraimi && (
                       <span className="text-[10px] px-1.5 py-0.2 bg-emerald-100 text-emerald-800 rounded font-sans">
                         {language === 'ar' ? 'حساب جاري' : 'Current'}
