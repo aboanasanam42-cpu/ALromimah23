@@ -59,7 +59,6 @@ import {
   seedInitialDataIfEmpty
 } from './lib/firestoreService';
 
-// محافظك الحقيقية المفعّلة لاستلام الأرباح تلقائياً
 const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
   {
     ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
@@ -385,7 +384,7 @@ export function App() {
       id: `tx-${Date.now()}`,
       amount: payout,
       currency: 'USD',
-      description: `استلام أرباح مشروع: ${proj.title} -> ${updatedWallet?.name || 'المحفظة الافتراضية'} (${updatedWallet?.accountNumber || '771134103'})`,
+      description: `استلام أرباح مشروع: ${proj.title} -> ${updatedWallet?.name || 'شامل موني'} (${updatedWallet?.accountNumber || '771134103'})`,
       date: new Date().toISOString().split('T')[0],
       status: 'completed' as const,
       type: 'payout' as const,
