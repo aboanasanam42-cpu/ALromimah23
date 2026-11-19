@@ -70,7 +70,6 @@ const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     currency: 'USD',
     balance: 0,
     isDefault: true,
-    verified: true,
   },
   {
     ...BASE_PM_TEMPLATE,
@@ -80,7 +79,6 @@ const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     currency: 'YER',
     balance: 0,
     isDefault: false,
-    verified: true,
   },
   {
     ...BASE_PM_TEMPLATE,
@@ -90,7 +88,6 @@ const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     currency: 'YER',
     balance: 0,
     isDefault: false,
-    verified: true,
   },
   {
     ...BASE_PM_TEMPLATE,
@@ -100,7 +97,6 @@ const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     currency: 'USDT',
     balance: 0,
     isDefault: false,
-    verified: true,
   },
   {
     ...BASE_PM_TEMPLATE,
@@ -110,7 +106,6 @@ const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     currency: 'USDT',
     balance: 0,
     isDefault: false,
-    verified: true,
   },
   {
     ...BASE_PM_TEMPLATE,
@@ -120,7 +115,6 @@ const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     currency: 'USDT',
     balance: 0,
     isDefault: false,
-    verified: true,
   },
   {
     ...BASE_PM_TEMPLATE,
@@ -130,7 +124,6 @@ const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
     currency: 'USDT',
     balance: 0,
     isDefault: false,
-    verified: true,
   },
 ];
 
@@ -265,7 +258,11 @@ export function App() {
       };
       await saveSyncLog(currentUser.uid, newLog);
       setSyncLogs((prev) => [newLog, ...prev]);
-      setSyncNotification(language === 'ar' ? 'تمت مزامنة جميع البيانات مع سحابة Firebase بنجاح!' : 'All data synced with Firebase Cloud successfully!');
+      setSyncNotification(
+        language === 'ar'
+          ? 'تمت مزامنة جميع البيانات مع سحابة Firebase بنجاح!'
+          : 'All data synced with Firebase Cloud successfully!'
+      );
       setTimeout(() => setSyncNotification(null), 4000);
     } catch (err) {
       console.error('Bulk sync failed:', err);
