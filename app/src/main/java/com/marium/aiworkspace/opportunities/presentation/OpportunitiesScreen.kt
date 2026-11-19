@@ -220,6 +220,8 @@ fun OpportunitiesScreen(navController: NavController) {
                                                                 val jobMap = (translations[job.id] ?: emptyMap()) + ("ar" to tr)
                                                                 translations = translations + (job.id to jobMap)
                                                                 activeLangByJob = activeLangByJob + (job.id to "ar")
+                                                            }.onFailure {
+                                                                message = "تعذر ترجمة الوظيفة حالياً، حاول مجدداً."
                                                             }
                                                             translatingJobId = null
                                                         }
@@ -245,6 +247,8 @@ fun OpportunitiesScreen(navController: NavController) {
                                                                 val jobMap = (translations[job.id] ?: emptyMap()) + ("en" to tr)
                                                                 translations = translations + (job.id to jobMap)
                                                                 activeLangByJob = activeLangByJob + (job.id to "en")
+                                                            }.onFailure {
+                                                                message = "تعذر ترجمة الوظيفة حالياً، حاول مجدداً."
                                                             }
                                                             translatingJobId = null
                                                         }
