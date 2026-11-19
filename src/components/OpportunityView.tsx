@@ -7,7 +7,6 @@ import { auth } from '../lib/firebase';
 import {
   saveOpportunity,
   updateOpportunityStatusInCloud,
-  deleteOpportunityFromCloud
 } from '../lib/firestoreService';
 import {
   Search,
@@ -15,7 +14,6 @@ import {
   CheckCircle2,
   AlertTriangle,
   Plus,
-  ShieldCheck,
   Award,
   DollarSign,
   X,
@@ -23,7 +21,6 @@ import {
   Check,
   EyeOff,
   ShieldAlert,
-  Sparkles,
 } from 'lucide-react';
 
 interface OpportunityViewProps {
@@ -45,7 +42,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
   const [showCalculator, setShowCalculator] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
 
-  // Scoring Calculator Sliders State (0 - 100)
   const [scoreInput, setScoreInput] = useState<ScoreInput>({
     sourceReliability: 85,
     payoutValue: 80,
@@ -56,7 +52,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
 
   const computedBreakdown = calculate100PointScore(scoreInput);
 
-  // New Opportunity Form State
   const [newTitle, setNewTitle] = useState('');
   const [newSource, setNewSource] = useState('');
   const [newCategory, setNewCategory] = useState('Software Engineering');
@@ -90,8 +85,8 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
       source: newSource || 'Direct Source',
       category: newCategory,
       payoutValue: 80,
-      rawPayoutUSD: Number(newReward) || 100,
-      reward: Number(newReward) || 100,
+      rawPayoutUSD: Math.max(1, Number(newReward) || 100),
+      reward: Math.max(1, Number(newReward) || 100),
       sourceReliability: 80,
       executionDurationDays: 7,
       executionDurationScore: 85,
@@ -108,12 +103,9 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
       createdAt: Date.now()
     };
 
-    // Run through Kotlin AIOpportunityAnalyzer fraud detection & score calculation
     const analyzed = analyzeAndScoreOpportunity(rawOpp);
-
     onAddOpportunity(analyzed);
 
-    // Persist live to Firebase Firestore directly
     const currentUid = auth.currentUser?.uid;
     if (currentUid) {
       saveOpportunity(currentUid, analyzed).catch((err) => {
@@ -122,8 +114,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
     }
 
     setShowAddModal(false);
-
-    // Reset Form
     setNewTitle('');
     setNewSource('');
     setNewDescription('');
@@ -145,12 +135,12 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
   };
 
   const getScoreColorClass = (score: number, riskScore: number = 0) => {
-    if (riskScore >= 50) return 'bg-rose-700 text-white'; // Suspicious Red
-    if (score >= 90) return 'bg-[rgb(46,125,50)] text-white'; // Dark Green
-    if (score >= 75) return 'bg-[rgb(21,101,192)] text-white'; // Deep Blue
-    if (score >= 60) return 'bg-[rgb(245,127,23)] text-white'; // Dark Yellow/Orange
-    if (score >= 40) return 'bg-[rgb(230,81,0)] text-white'; // Orange
-    return 'bg-[rgb(198,40,40)] text-white'; // Red
+    if (riskScore >= 50) return 'bg-rose-700 text-white';
+    if (score >= 90) return 'bg-[rgb(46,125,50)] text-white';
+    if (score >= 75) return 'bg-[rgb(21,101,192)] text-white';
+    if (score >= 60) return 'bg-[rgb(245,127,23)] text-white';
+    if (score >= 40) return 'bg-[rgb(230,81,0)] text-white';
+    return 'bg-[rgb(198,40,40)] text-white';
   };
 
   return (
@@ -200,7 +190,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                   {t(language, 'calculatorTitle')}
                 </h3>
                 <p className="text-xs text-slate-500">
-                  {language === 'ar' 
+                  {language === 'ar'
                     ? 'اختبار وتحسين عوامل تقييم 100 نقطة (موثوقية 35%، قيمة الدفع 25%، مدة التنفيذ 15%، وضوح الوصف 10%، منع الاحتيال 15%)'
                     : 'Interactive 100-Point Scoring Engine (35% Source, 25% Payout, 15% Duration, 10% Clarity, 15% Anti-Fraud)'}
                 </p>
@@ -215,9 +205,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
-            {/* 5 Factor Sliders */}
             <div className="md:col-span-8 space-y-4">
-              {/* Slider 1: Source Reliability */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold text-slate-800">
                   <span>{t(language, 'sourceReliabilityLabel')}</span>
@@ -233,7 +221,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                 />
               </div>
 
-              {/* Slider 2: Payout Value */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold text-slate-800">
                   <span>{t(language, 'payoutValueLabel')}</span>
@@ -249,7 +236,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                 />
               </div>
 
-              {/* Slider 3: Execution Duration */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold text-slate-800">
                   <span>{t(language, 'executionDurationLabel')}</span>
@@ -265,7 +251,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                 />
               </div>
 
-              {/* Slider 4: Description Clarity */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold text-slate-800">
                   <span>{t(language, 'descriptionClarityLabel')}</span>
@@ -281,7 +266,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                 />
               </div>
 
-              {/* Slider 5: Anti-Fraud Filter */}
               <div className="space-y-1">
                 <div className="flex justify-between text-xs font-bold text-slate-800">
                   <span>{t(language, 'antiFraudFilterLabel')}</span>
@@ -298,7 +282,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
               </div>
             </div>
 
-            {/* Live Computed Output Card */}
             <div className="md:col-span-4 bg-slate-900 text-white p-5 rounded-2xl space-y-4 text-center">
               <div>
                 <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -329,10 +312,9 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
         </div>
       )}
 
-      {/* Controls Bar: Search & Status Filters */}
+      {/* Controls Bar */}
       <div className="bg-white rounded-2xl p-4 border border-slate-200 shadow-xs space-y-3">
         <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-          {/* Search Box */}
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 rtl:left-auto rtl:right-3 top-1/2 -translate-y-1/2" />
             <input
@@ -340,11 +322,10 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={t(language, 'searchPlaceholder')}
-              className="w-full pl-9 rtl:pl-3 rtl:pr-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
+              className="w-full pl-9 rtl:pl-3 rtl:pr-9 pr-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 text-slate-900"
             />
           </div>
 
-          {/* Status Filter Tabs */}
           <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
             {[
               { id: 'all', labelAr: 'الكل', labelEn: 'All' },
@@ -455,7 +436,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                   </p>
                 </div>
 
-                {/* Actions Row (Matches Kotlin OpportunitiesScreen) */}
                 <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-2">
                   <button
                     onClick={(e) => handleStatusChange(opp.id, 'accepted', e)}
@@ -499,10 +479,10 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
         )}
       </div>
 
-      {/* Modal: Add Opportunity Modal */}
+      {/* Add Opportunity Modal */}
       {showAddModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-5 animate-fadeIn">
+          <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-xl space-y-5 animate-fadeIn text-slate-900">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
               <h3 className="text-base font-bold text-slate-900">
                 {language === 'ar' ? 'إضافة فرصة جديدة للتحليل السحابي' : 'Add New Opportunity'}
@@ -541,6 +521,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                   <label className="text-xs font-bold text-slate-700">{language === 'ar' ? 'الربح المتوقع (USD)' : 'Reward (USD)'}</label>
                   <input
                     type="number"
+                    min="1"
                     required
                     value={newReward}
                     onChange={(e) => setNewReward(Number(e.target.value))}
@@ -580,10 +561,10 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
         </div>
       )}
 
-      {/* Modal: Opportunity Detail Modal */}
+      {/* Opportunity Detail Modal */}
       {selectedOpp && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto text-slate-900">
             <div className="flex items-start justify-between pb-3 border-b border-slate-100">
               <div>
                 <span className="text-xs font-bold text-emerald-800 px-2.5 py-1 bg-emerald-100 rounded-lg">
@@ -601,7 +582,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
               </button>
             </div>
 
-            {/* Key Job Metrics Grid */}
             <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl text-center border border-slate-200">
               <div>
                 <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'safetyCheck')}</div>
@@ -617,7 +597,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
               </div>
             </div>
 
-            {/* Section 1: Work Description */}
             <div className="space-y-1.5">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
@@ -628,7 +607,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
               </p>
             </div>
 
-            {/* Section 2: How to Get & Apply for the Job */}
             <div className="space-y-1.5">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-sky-600"></span>
@@ -650,7 +628,6 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
               </div>
             </div>
 
-            {/* Section 3: How to Withdraw Earnings */}
             <div className="space-y-1.5">
               <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
                 <span className="w-2 h-2 rounded-full bg-violet-600"></span>
@@ -661,12 +638,11 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                   بعد تسليم العمل والتحقق منه تلقائياً، يودع المبلغ المباشر <strong className="text-violet-900 font-extrabold">${(selectedOpp.reward ?? selectedOpp.rawPayoutUSD).toLocaleString()} USD</strong> في محفظتك.
                 </p>
                 <div className="text-[11px] text-slate-600 pt-1 font-semibold">
-                  يمكنك سحب الأموال عبر: <strong>الحساب البنكي المباشر، PayPal، أو محفظة USDT الكريبتو</strong> من خلال قسم <strong className="text-violet-800">"استلام المبالغ والمحفظة"</strong>.
+                  يمكنك سحب الأموال مباشرة عبر محافظك المعتمدة: <strong>شامل موني (771134103)، ون كاش (730768718)، أو Binance USDT (TRC20 / BEP20 / ERC20 / SOL)</strong> من خلال قسم <strong className="text-violet-800">"المدفوعات والمحفظة"</strong>.
                 </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
             <div className="pt-2 flex justify-between items-center gap-2">
               <div className="flex items-center gap-2">
                 <button
