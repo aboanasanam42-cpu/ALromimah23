@@ -44,7 +44,7 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
         var connection: HttpURLConnection? = null
         try {
             val url = URL("$baseUrl/api/translate")
-            connection = (url.openConnection() as HttpURLConnection).apply {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Accept", "application/json")
@@ -53,6 +53,7 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
                 connectTimeout = 20_000
                 readTimeout = 20_000
             }
+            connection = conn
 
             val payload = JSONObject().apply {
                 put("title", title)
@@ -60,16 +61,16 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
                 put("targetLang", targetLang)
             }
 
-            OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
                 writer.write(payload.toString())
                 writer.flush()
             }
 
-            val responseCode = connection.responseCode
+            val responseCode = conn.responseCode
             val responseStream = if (responseCode in 200..299) {
-                connection.inputStream
+                conn.inputStream
             } else {
-                connection.errorStream ?: connection.inputStream
+                conn.errorStream ?: conn.inputStream
             }
 
             val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
@@ -96,7 +97,7 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
         var connection: HttpURLConnection? = null
         try {
             val url = URL("$baseUrl/api/analyze")
-            connection = (url.openConnection() as HttpURLConnection).apply {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Accept", "application/json")
@@ -105,22 +106,23 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
                 connectTimeout = 20_000
                 readTimeout = 20_000
             }
+            connection = conn
 
             val payload = JSONObject().apply {
                 put("text", text)
                 put("analysisType", analysisType)
             }
 
-            OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
                 writer.write(payload.toString())
                 writer.flush()
             }
 
-            val responseCode = connection.responseCode
+            val responseCode = conn.responseCode
             val responseStream = if (responseCode in 200..299) {
-                connection.inputStream
+                conn.inputStream
             } else {
-                connection.errorStream ?: connection.inputStream
+                conn.errorStream ?: conn.inputStream
             }
 
             val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
@@ -172,7 +174,7 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
         var connection: HttpURLConnection? = null
         try {
             val url = URL("$baseUrl/api/proposal/generate")
-            connection = (url.openConnection() as HttpURLConnection).apply {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Accept", "application/json")
@@ -181,6 +183,7 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
                 connectTimeout = 20_000
                 readTimeout = 20_000
             }
+            connection = conn
 
             val payload = JSONObject().apply {
                 put("opportunityTitle", title)
@@ -190,16 +193,16 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
                 put("description", description)
             }
 
-            OutputStreamWriter(connection.outputStream, "UTF-8").use { writer ->
+            OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
                 writer.write(payload.toString())
                 writer.flush()
             }
 
-            val responseCode = connection.responseCode
+            val responseCode = conn.responseCode
             val responseStream = if (responseCode in 200..299) {
-                connection.inputStream
+                conn.inputStream
             } else {
-                connection.errorStream ?: connection.inputStream
+                conn.errorStream ?: conn.inputStream
             }
 
             val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
