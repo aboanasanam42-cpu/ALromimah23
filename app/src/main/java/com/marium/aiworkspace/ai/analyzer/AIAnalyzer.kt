@@ -28,19 +28,20 @@ data class AIProposalResult(
     val clientQuestions: List<String>
 )
 
-class AIAnalyzer(private val baseUrl: String = "http://10.0.2.2:3000") {
+class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app") {
 
     suspend fun analyzeText(text: String, analysisType: String = "comprehensive"): Result<AIAnalysisResult> = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
         try {
             val url = URL("$baseUrl/api/analyze")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
+            connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Accept", "application/json")
                 doOutput = true
                 doInput = true
-                connectTimeout = 15000
-                readTimeout = 15000
+                connectTimeout = 20_000
+                readTimeout = 20_000
             }
 
             val payload = JSONObject().apply {
@@ -63,7 +64,7 @@ class AIAnalyzer(private val baseUrl: String = "http://10.0.2.2:3000") {
             val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
 
             if (responseCode !in 200..299) {
-                return@withContext Result.failure(Exception("HTTP Error $responseCode: $responseText"))
+                return@withContext Result.failure(Exception("HTTP Error $responseCode:$responseText"))
             }
 
             val json = JSONObject(responseText)
@@ -94,6 +95,8 @@ class AIAnalyzer(private val baseUrl: String = "http://10.0.2.2:3000") {
             Result.success(analysis)
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            connection?.disconnect()
         }
     }
 
@@ -104,16 +107,17 @@ class AIAnalyzer(private val baseUrl: String = "http://10.0.2.2:3000") {
         reward: Double,
         description: String
     ): Result<AIProposalResult> = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
         try {
             val url = URL("$baseUrl/api/proposal/generate")
-            val connection = (url.openConnection() as HttpURLConnection).apply {
+            connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 setRequestProperty("Content-Type", "application/json; charset=UTF-8")
                 setRequestProperty("Accept", "application/json")
                 doOutput = true
                 doInput = true
-                connectTimeout = 15000
-                readTimeout = 15000
+                connectTimeout = 20_000
+                readTimeout = 20_000
             }
 
             val payload = JSONObject().apply {
@@ -137,6 +141,10 @@ class AIAnalyzer(private val baseUrl: String = "http://10.0.2.2:3000") {
             }
 
             val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
+            if (responseCode !in 200..299) {
+                return@withContext Result.failure(Exception("HTTP Error $responseCode:$responseText"))
+            }
+
             val json = JSONObject(responseText)
             val proposal = json.optJSONObject("proposal") ?: JSONObject()
 
@@ -163,6 +171,8 @@ class AIAnalyzer(private val baseUrl: String = "http://10.0.2.2:3000") {
             Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            connection?.disconnect()
         }
     }
 }
