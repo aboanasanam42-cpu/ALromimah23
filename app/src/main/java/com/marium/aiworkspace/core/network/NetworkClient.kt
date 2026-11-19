@@ -12,12 +12,9 @@ import java.net.URL
 
 class NetworkClient(private val context: Context? = null) {
 
-    /**
-     * Checks if the device has active internet capability using modern NetworkCapabilities API.
-     */
     fun isInternetAvailable(): Boolean {
         val cm = context?.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
-            ?: return true // Fallback to true if context not provided
+            ?: return true
 
         val activeNetwork = cm.activeNetwork ?: return false
         val capabilities = cm.getNetworkCapabilities(activeNetwork) ?: return false
@@ -26,24 +23,26 @@ class NetworkClient(private val context: Context? = null) {
                 capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
     }
 
-    /**
-     * Performs a standard GET/POST request on [Dispatchers.IO].
-     */
     suspend fun makeApiCall(
         endpoint: String,
         method: String = "GET",
         headers: Map<String, String> = emptyMap(),
         body: String? = null
     ): Result<String> = withContext(Dispatchers.IO) {
+        var connection: HttpURLConnection? = null
         try {
             val url = URL(endpoint)
-            val connection = (url.openConnection() as HttpURLConnection).apply {
+            connection = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = method
-                connectTimeout = 15000
-                readTimeout = 15000
+                connectTimeout = 15_000
+                readTimeout = 15_000
+                setRequestProperty("Accept", "application/json")
                 headers.forEach { (k, v) -> setRequestProperty(k, v) }
                 if (body != null) {
                     doOutput = true
+                    if (!headers.containsKey("Content-Type")) {
+                        setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+                    }
                     outputStream.use { os ->
                         os.write(body.toByteArray(Charsets.UTF_8))
                         os.flush()
@@ -52,7 +51,11 @@ class NetworkClient(private val context: Context? = null) {
             }
 
             val responseCode = connection.responseCode
-            val stream = if (responseCode in 200..299) connection.inputStream else connection.errorStream ?: connection.inputStream
+            val stream = if (responseCode in 200..299) {
+                connection.inputStream
+            } else {
+                connection.errorStream ?: connection.inputStream
+            }
             val responseText = BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).use { it.readText() }
 
             if (responseCode in 200..299) {
@@ -62,6 +65,8 @@ class NetworkClient(private val context: Context? = null) {
             }
         } catch (e: Exception) {
             Result.failure(e)
+        } finally {
+            connection?.disconnect()
         }
     }
 }
