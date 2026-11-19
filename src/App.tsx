@@ -59,62 +59,79 @@ import {
   seedInitialDataIfEmpty
 } from './lib/firestoreService';
 
+const BASE_PM_TEMPLATE = DEFAULT_SEED_PAYMENT_METHODS[0] || ({} as PaymentMethod);
+
 const OWNER_DEFAULT_PAYMENT_METHODS: PaymentMethod[] = [
   {
-    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
-    id: 'pm-shamel-money',
-    name: 'شامل موني (Shamel Money)',
-    type: 'wallet' as any,
-    accountNumber: '771134103',
-    currency: 'YER',
+    ...BASE_PM_TEMPLATE,
+    id: 'pm-kuraimi-usd',
+    name: 'بنك الكريمي للتمويل الأصغر الإسلامي (جاري - تعز)',
+    accountNumber: '3181903553',
+    currency: 'USD',
     balance: 0,
     isDefault: true,
     verified: true,
-  } as PaymentMethod,
+  },
   {
-    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    ...BASE_PM_TEMPLATE,
+    id: 'pm-shamel-money',
+    name: 'شامل موني (Shamel Money)',
+    accountNumber: '771134103',
+    currency: 'YER',
+    balance: 0,
+    isDefault: false,
+    verified: true,
+  },
+  {
+    ...BASE_PM_TEMPLATE,
     id: 'pm-one-cash',
-    name: 'ون كاش (OneCash) - بديل: 146158879',
-    type: 'wallet' as any,
+    name: 'ون كاش (OneCash) - الحساب البديل: 146158879',
     accountNumber: '730768718',
     currency: 'YER',
     balance: 0,
     isDefault: false,
     verified: true,
-  } as PaymentMethod,
+  },
   {
-    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    ...BASE_PM_TEMPLATE,
     id: 'pm-binance-trc20',
-    name: 'Binance USDT (TRC20)',
-    type: 'crypto' as any,
+    name: 'Binance USDT (Tron TRC20)',
     accountNumber: 'TBZjJKmePUGVT5tGwpQrfk6z7ZmSiJkTpv',
     currency: 'USDT',
     balance: 0,
     isDefault: false,
     verified: true,
-  } as PaymentMethod,
+  },
   {
-    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    ...BASE_PM_TEMPLATE,
     id: 'pm-binance-bep20',
-    name: 'Binance USDT (BEP20 / ERC20)',
-    type: 'crypto' as any,
+    name: 'Binance USDT (BNB Smart Chain BEP20)',
     accountNumber: '0x31ac47694c792a7c7d5ced4cc8dc31010b83c20a',
     currency: 'USDT',
     balance: 0,
     isDefault: false,
     verified: true,
-  } as PaymentMethod,
+  },
   {
-    ...(DEFAULT_SEED_PAYMENT_METHODS[0] || {}),
+    ...BASE_PM_TEMPLATE,
+    id: 'pm-binance-erc20',
+    name: 'Binance USDT (Ethereum ERC20)',
+    accountNumber: '0x31ac47694c792a7c7d5ced4cc8dc31010b83c20a',
+    currency: 'USDT',
+    balance: 0,
+    isDefault: false,
+    verified: true,
+  },
+  {
+    ...BASE_PM_TEMPLATE,
     id: 'pm-binance-sol',
     name: 'Binance USDT (Solana SOL)',
-    type: 'crypto' as any,
     accountNumber: '85BcyhKTsFBvssX5PGm5uCjCK7kucBN7e2PTVfoDm8hj',
     currency: 'USDT',
     balance: 0,
     isDefault: false,
     verified: true,
-  } as PaymentMethod,
+  },
 ];
 
 export function App() {
@@ -306,7 +323,7 @@ export function App() {
       await savePaymentMethod(currentUser.uid, updatedPm).catch(console.error);
     }
     setSyncNotification(
-      language === 'ar' ? 'تم تحديث بيانات المحفظة بنجاح!' : 'Wallet details updated successfully!'
+      language === 'ar' ? 'تم تحديث بيانات الحساب/المحفظة بنجاح!' : 'Account details updated successfully!'
     );
     setTimeout(() => setSyncNotification(null), 4000);
   };
@@ -371,7 +388,7 @@ export function App() {
     if (!proj) return;
 
     const payout = proj.payoutUSD;
-    const targetIdx = paymentMethods.findIndex((pm) => pm.isDefault);
+    const targetIdx = paymentMethods.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
     const resolvedIdx = targetIdx >= 0 ? targetIdx : 0;
     const targetWallet = paymentMethods[resolvedIdx];
     const updatedWallet = targetWallet ? { ...targetWallet, balance: targetWallet.balance + payout } : null;
@@ -384,7 +401,7 @@ export function App() {
       id: `tx-${Date.now()}`,
       amount: payout,
       currency: 'USD',
-      description: `استلام أرباح مشروع: ${proj.title} -> ${updatedWallet?.name || 'شامل موني'} (${updatedWallet?.accountNumber || '771134103'})`,
+      description: `استلام أرباح مشروع: ${proj.title} -> ${updatedWallet?.name || 'بنك الكريمي'} (${updatedWallet?.accountNumber || '3181903553'})`,
       date: new Date().toISOString().split('T')[0],
       status: 'completed' as const,
       type: 'payout' as const,
@@ -407,15 +424,15 @@ export function App() {
 
     setSyncNotification(
       language === 'ar'
-        ? `تم تسليم المشروع وقيد $${payout} في محفظتك (${updatedWallet?.name || 'شامل موني'}) بنجاح!`
-        : `Project delivered! $${payout} credited to your wallet.`
+        ? `تم تسليم المشروع وقيد $${payout} في حسابك ببنك الكريمي 3181903553 بنجاح!`
+        : `Project delivered! $${payout} credited to Al-Kuraimi Account 3181903553.`
     );
     setTimeout(() => setSyncNotification(null), 5000);
     setActiveTab('payments');
   };
 
   const handleWithdrawToKuraimi = async (amount: number, currency: string, note?: string) => {
-    const targetIdx = paymentMethods.findIndex((pm) => pm.isDefault);
+    const targetIdx = paymentMethods.findIndex((pm) => pm.accountNumber === '3181903553' || pm.isDefault);
     const resolvedIdx = targetIdx >= 0 ? targetIdx : 0;
     const targetWallet = paymentMethods[resolvedIdx];
     const updatedWallet = targetWallet
@@ -427,10 +444,10 @@ export function App() {
     }
 
     const newTx = {
-      id: `tx-wd-${Date.now()}`,
+      id: `tx-kimb-${Date.now()}`,
       amount: -amount,
       currency: currency || 'USD',
-      description: `سحب إلى ${updatedWallet?.name || 'شامل موني'} (${updatedWallet?.accountNumber || '771134103'}) - ${note || 'سحب أرباح'}`,
+      description: `سحب إلى بنك الكريمي رقم: 3181903553 (${note || 'سحب أرباح'})`,
       date: new Date().toISOString().split('T')[0],
       status: 'completed' as const,
       type: 'withdrawal' as const,
@@ -451,8 +468,8 @@ export function App() {
 
     setSyncNotification(
       language === 'ar'
-        ? `تم تسجيل سحب $${amount} إلى ${updatedWallet?.name || 'محفظتك'} بنجاح!`
-        : `Successfully recorded withdrawal of $${amount}!`
+        ? `تم سحب وتحويل $${amount} إلى حساب بنك الكريمي 3181903553 بنجاح!`
+        : `Successfully withdrew $${amount} to Kuraimi Bank account 3181903553!`
     );
     setTimeout(() => setSyncNotification(null), 5000);
   };
