@@ -58,7 +58,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto text-white">
-      {/* Header Banner */}
       <div className="bg-gradient-to-r from-[#17123d] via-[#1a1448] to-[#120d2f] rounded-3xl p-6 sm:p-7 border border-purple-500/30 shadow-xl flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="p-3 bg-purple-900/50 rounded-2xl border border-purple-500/30">
@@ -84,7 +83,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       )}
 
-      {/* GitHub Actions CI/CD Integration & Workflow Card */}
       <div className="bg-[#151034] rounded-3xl p-6 border border-purple-500/30 shadow-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -128,7 +126,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Android Keystore Fingerprints */}
       <div className="bg-[#151034] rounded-3xl p-6 border border-purple-500/30 shadow-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -200,7 +197,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Language Selector Section */}
       <div className="bg-[#151034] rounded-3xl p-6 border border-purple-500/30 shadow-xl space-y-4">
         <div className="flex items-center gap-2">
           <Globe className="w-5 h-5 text-purple-400" />
@@ -242,7 +238,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Save Button */}
       <div className="flex justify-end pt-2">
         <button
           onClick={handleSave}
