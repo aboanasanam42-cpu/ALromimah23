@@ -21,6 +21,9 @@ import {
   Check,
   EyeOff,
   ShieldAlert,
+  Languages,
+  RefreshCw,
+  ChevronDown,
 } from 'lucide-react';
 
 interface OpportunityViewProps {
@@ -28,6 +31,12 @@ interface OpportunityViewProps {
   opportunities: Opportunity[];
   onAddOpportunity: (opp: Opportunity) => void;
   onUpdateOpportunityStatus?: (id: string, status: OpportunityStatus) => void;
+}
+
+interface TranslatedJobContent {
+  title: string;
+  description: string;
+  lang: 'ar' | 'en';
 }
 
 export const OpportunityView: React.FC<OpportunityViewProps> = ({
@@ -41,6 +50,14 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
   const [selectedOpp, setSelectedOpp] = useState<Opportunity | null>(null);
   const [showCalculator, setShowCalculator] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+
+  // حالات ترجمة كل وظيفة بشكل مستقل
+  const [translatedJobs, setTranslatedJobs] = useState<
+    Record<string, Partial<Record<'ar' | 'en', TranslatedJobContent>>>
+  >({});
+  const [activeJobLang, setActiveJobLang] = useState<Record<string, 'original' | 'ar' | 'en'>>({});
+  const [translatingJobId, setTranslatingJobId] = useState<string | null>(null);
+  const [openLangMenuId, setOpenLangMenuId] = useState<string | null>(null);
 
   const [scoreInput, setScoreInput] = useState<ScoreInput>({
     sourceReliability: 85,
@@ -59,12 +76,120 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
   const [newDescription, setNewDescription] = useState('');
   const [newSkills, setNewSkills] = useState('');
 
+  const translateSingleField = async (text: string, targetLang: 'ar' | 'en'): Promise<string> => {
+    if (!text.trim()) return text;
+    const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error('Fallback failed');
+    const data = await res.json();
+    const segments = Array.isArray(data?.[0]) ? data[0] : [];
+    return segments.map((s: any) => (typeof s?.[0] === 'string' ? s[0] : '')).join('');
+  };
+
+  const handleTranslateJob = async (
+    opp: Opportunity,
+    targetLang: 'original' | 'ar' | 'en',
+    e?: React.MouseEvent
+  ) => {
+    if (e) e.stopPropagation();
+    setOpenLangMenuId(null);
+
+    if (targetLang === 'original') {
+      setActiveJobLang((prev) => ({ ...prev, [opp.id]: 'original' }));
+      return;
+    }
+
+    const cached = translatedJobs[opp.id]?.[targetLang];
+    if (cached) {
+      setActiveJobLang((prev) => ({ ...prev, [opp.id]: targetLang }));
+      return;
+    }
+
+    setTranslatingJobId(opp.id);
+    try {
+      const response = await fetch('/api/translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: opp.title,
+          description: opp.description,
+          targetLang,
+        }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.success && (data.title || data.description)) {
+          setTranslatedJobs((prev) => ({
+            ...prev,
+            [opp.id]: {
+              ...(prev[opp.id] || {}),
+              [targetLang]: {
+                title: data.title || opp.title,
+                description: data.description || opp.description,
+                lang: targetLang,
+              },
+            },
+          }));
+          setActiveJobLang((prev) => ({ ...prev, [opp.id]: targetLang }));
+          return;
+        }
+      }
+      throw new Error('Server translate unavailable');
+    } catch {
+      try {
+        const [tTitle, tDesc] = await Promise.all([
+          translateSingleField(opp.title, targetLang),
+          translateSingleField(opp.description, targetLang),
+        ]);
+        setTranslatedJobs((prev) => ({
+          ...prev,
+          [opp.id]: {
+            ...(prev[opp.id] || {}),
+            [targetLang]: {
+              title: tTitle || opp.title,
+              description: tDesc || opp.description,
+              lang: targetLang,
+            },
+          },
+        }));
+        setActiveJobLang((prev) => ({ ...prev, [opp.id]: targetLang }));
+      } catch (err) {
+        console.warn('Translation failed:', err);
+      }
+    } finally {
+      setTranslatingJobId(null);
+    }
+  };
+
+  const getDisplayedJobText = (opp: Opportunity) => {
+    const mode = activeJobLang[opp.id] || 'original';
+    if (mode === 'ar' || mode === 'en') {
+      const translated = translatedJobs[opp.id]?.[mode];
+      if (translated) {
+        return {
+          title: translated.title,
+          description: translated.description,
+          mode,
+        };
+      }
+    }
+    return {
+      title: opp.title,
+      description: opp.description,
+      mode: 'original' as const,
+    };
+  };
+
   const filteredOpportunities = opportunities.map(analyzeAndScoreOpportunity).filter((opp) => {
+    const displayed = getDisplayedJobText(opp);
     const query = searchQuery.toLowerCase();
     const matchesSearch =
+      displayed.title.toLowerCase().includes(query) ||
       opp.title.toLowerCase().includes(query) ||
       (opp.source || opp.company || '').toLowerCase().includes(query) ||
       opp.category.toLowerCase().includes(query) ||
+      displayed.description.toLowerCase().includes(query) ||
       opp.description.toLowerCase().includes(query) ||
       opp.requiredSkills.some((s) => s.toLowerCase().includes(query));
 
@@ -100,7 +225,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
       location: 'Remote',
       requiredSkills: newSkills ? newSkills.split(',').map((s) => s.trim()) : ['Remote Work'],
       status: 'new',
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
     const analyzed = analyzeAndScoreOpportunity(rawOpp);
@@ -144,7 +269,7 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" onClick={() => setOpenLangMenuId(null)}>
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 text-white rounded-2xl p-6 sm:p-8 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -298,12 +423,17 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
 
               <div className="p-3 bg-white/10 rounded-xl text-xs space-y-1">
                 <div className="text-slate-400 font-semibold">{t(language, 'riskLevelLabel')}</div>
-                <div className={`font-extrabold text-sm ${
-                  computedBreakdown.riskLevel === 'Verified' ? 'text-emerald-400'
-                  : computedBreakdown.riskLevel === 'Low Risk' ? 'text-sky-300'
-                  : computedBreakdown.riskLevel === 'Medium Risk' ? 'text-amber-300'
-                  : 'text-rose-400'
-                }`}>
+                <div
+                  className={`font-extrabold text-sm ${
+                    computedBreakdown.riskLevel === 'Verified'
+                      ? 'text-emerald-400'
+                      : computedBreakdown.riskLevel === 'Low Risk'
+                      ? 'text-sky-300'
+                      : computedBreakdown.riskLevel === 'Medium Risk'
+                      ? 'text-amber-300'
+                      : 'text-rose-400'
+                  }`}
+                >
                   {computedBreakdown.riskLevel}
                 </div>
               </div>
@@ -375,20 +505,33 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
             const score = opp.score ?? opp.totalScore;
             const risk = opp.riskScore ?? 0;
             const scoreBadgeClass = getScoreColorClass(score, risk);
+            const displayed = getDisplayedJobText(opp);
+            const isTranslatingThis = translatingJobId === opp.id;
+            const isMenuOpen = openLangMenuId === opp.id;
 
             return (
               <div
                 key={opp.id}
                 onClick={() => setSelectedOpp(opp)}
-                className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group"
+                className="bg-white rounded-2xl p-5 border border-slate-200 shadow-xs hover:border-emerald-400 hover:shadow-md transition-all cursor-pointer flex flex-col justify-between space-y-4 group relative"
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
-                    <div>
+                    <div className="flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-semibold px-2 py-0.5 bg-emerald-50 text-emerald-800 rounded-md border border-emerald-100">
                           {t(language, 'jobCategory')}: {opp.category}
                         </span>
+                        {displayed.mode === 'ar' && (
+                          <span className="px-2 py-0.5 bg-sky-100 text-sky-800 text-[10px] font-bold rounded-md">
+                            مترجم للعربية
+                          </span>
+                        )}
+                        {displayed.mode === 'en' && (
+                          <span className="px-2 py-0.5 bg-indigo-100 text-indigo-800 text-[10px] font-bold rounded-md">
+                            Translated to EN
+                          </span>
+                        )}
                         {opp.status === 'suspicious' && (
                           <span className="px-2 py-0.5 bg-rose-100 text-rose-800 text-[10px] font-bold rounded-md flex items-center gap-1">
                             <AlertTriangle className="w-3 h-3 text-rose-600" />
@@ -408,18 +551,96 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                           </span>
                         )}
                       </div>
-                      <h4 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mt-1.5">
-                        {opp.title}
+
+                      <h4
+                        dir={displayed.mode === 'ar' ? 'rtl' : displayed.mode === 'en' ? 'ltr' : 'auto'}
+                        className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors mt-1.5"
+                      >
+                        {displayed.title}
                       </h4>
                       <p className="text-xs text-slate-500 font-medium">
-                        {t(language, 'workSource')}: <span className="text-slate-700 font-bold">{opp.source || opp.company}</span>
+                        {t(language, 'workSource')}:{' '}
+                        <span className="text-slate-700 font-bold">{opp.source || opp.company}</span>
                       </p>
                     </div>
 
-                    <div className="text-right rtl:text-left shrink-0">
-                      <span className={`inline-block px-3 py-1 rounded-xl text-sm font-extrabold shadow-xs ${scoreBadgeClass}`}>
+                    {/* زر اختيار اللغة + نسبة التقييم بجوار كل وظيفة */}
+                    <div className="flex flex-col items-end gap-1.5 shrink-0">
+                      <span
+                        className={`inline-block px-3 py-1 rounded-xl text-sm font-extrabold shadow-xs ${scoreBadgeClass}`}
+                      >
                         {score}%
                       </span>
+
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setOpenLangMenuId(isMenuOpen ? null : opp.id);
+                          }}
+                          disabled={isTranslatingThis}
+                          className="px-2.5 py-1 rounded-lg bg-sky-50 hover:bg-sky-100 text-sky-800 border border-sky-200 text-[11px] font-bold flex items-center gap-1 transition-all"
+                          title={language === 'ar' ? 'ترجمة الوظيفة' : 'Translate Job'}
+                        >
+                          {isTranslatingThis ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-600" />
+                          ) : (
+                            <Languages className="w-3.5 h-3.5 text-sky-600" />
+                          )}
+                          <span>
+                            {isTranslatingThis
+                              ? language === 'ar'
+                                ? 'جاري الترجمة...'
+                                : 'Translating...'
+                              : displayed.mode === 'ar'
+                              ? 'العربية'
+                              : displayed.mode === 'en'
+                              ? 'English'
+                              : language === 'ar'
+                              ? 'اللغة'
+                              : 'Language'}
+                          </span>
+                          <ChevronDown className="w-3 h-3" />
+                        </button>
+
+                        {isMenuOpen && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute left-0 rtl:left-0 rtl:right-auto mt-1 w-36 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-30 text-xs font-bold text-slate-800"
+                          >
+                            <button
+                              type="button"
+                              onClick={(e) => handleTranslateJob(opp, 'ar', e)}
+                              className={`w-full px-3 py-2 text-right flex items-center justify-between hover:bg-sky-50 ${
+                                displayed.mode === 'ar' ? 'text-sky-700 bg-sky-50/60' : ''
+                              }`}
+                            >
+                              <span>🇾🇪 العربية</span>
+                              {displayed.mode === 'ar' && <Check className="w-3.5 h-3.5 text-sky-600" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => handleTranslateJob(opp, 'en', e)}
+                              className={`w-full px-3 py-2 text-right flex items-center justify-between hover:bg-sky-50 ${
+                                displayed.mode === 'en' ? 'text-sky-700 bg-sky-50/60' : ''
+                              }`}
+                            >
+                              <span>🇺🇸 English</span>
+                              {displayed.mode === 'en' && <Check className="w-3.5 h-3.5 text-sky-600" />}
+                            </button>
+                            {displayed.mode !== 'original' && (
+                              <button
+                                type="button"
+                                onClick={(e) => handleTranslateJob(opp, 'original', e)}
+                                className="w-full px-3 py-1.5 text-right text-[11px] text-slate-500 hover:bg-slate-50 border-t border-slate-100"
+                              >
+                                {language === 'ar' ? 'النص الأصلي' : 'Original Text'}
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -428,11 +649,16 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                       <DollarSign className="w-4 h-4 text-emerald-600" />
                       <span>{t(language, 'payoutAmount')}:</span>
                     </div>
-                    <span className="text-emerald-700 text-sm font-extrabold">${(opp.reward ?? opp.rawPayoutUSD).toLocaleString()} USD</span>
+                    <span className="text-emerald-700 text-sm font-extrabold">
+                      ${(opp.reward ?? opp.rawPayoutUSD).toLocaleString()} USD
+                    </span>
                   </div>
 
-                  <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
-                    {opp.description}
+                  <p
+                    dir={displayed.mode === 'ar' ? 'rtl' : displayed.mode === 'en' ? 'ltr' : 'auto'}
+                    className="text-xs text-slate-600 line-clamp-3 leading-relaxed"
+                  >
+                    {displayed.description}
                   </p>
                 </div>
 
@@ -494,7 +720,9 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
 
             <form onSubmit={handleCreateOpportunity} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">{language === 'ar' ? 'عنوان الفرصة' : 'Opportunity Title'}</label>
+                <label className="text-xs font-bold text-slate-700">
+                  {language === 'ar' ? 'عنوان الفرصة' : 'Opportunity Title'}
+                </label>
                 <input
                   type="text"
                   required
@@ -507,7 +735,9 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">{language === 'ar' ? 'المصدر' : 'Source'}</label>
+                  <label className="text-xs font-bold text-slate-700">
+                    {language === 'ar' ? 'المصدر' : 'Source'}
+                  </label>
                   <input
                     type="text"
                     required
@@ -518,7 +748,9 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
                   />
                 </div>
                 <div className="space-y-1">
-                  <label className="text-xs font-bold text-slate-700">{language === 'ar' ? 'الربح المتوقع (USD)' : 'Reward (USD)'}</label>
+                  <label className="text-xs font-bold text-slate-700">
+                    {language === 'ar' ? 'الربح المتوقع (USD)' : 'Reward (USD)'}
+                  </label>
                   <input
                     type="number"
                     min="1"
@@ -531,7 +763,9 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-700">{language === 'ar' ? 'وصف الفرصة والتفاصيل' : 'Description & Details'}</label>
+                <label className="text-xs font-bold text-slate-700">
+                  {language === 'ar' ? 'وصف الفرصة والتفاصيل' : 'Description & Details'}
+                </label>
                 <textarea
                   rows={3}
                   value={newDescription}
@@ -562,119 +796,188 @@ export const OpportunityView: React.FC<OpportunityViewProps> = ({
       )}
 
       {/* Opportunity Detail Modal */}
-      {selectedOpp && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto text-slate-900">
-            <div className="flex items-start justify-between pb-3 border-b border-slate-100">
-              <div>
-                <span className="text-xs font-bold text-emerald-800 px-2.5 py-1 bg-emerald-100 rounded-lg">
-                  {t(language, 'jobCategory')}: {selectedOpp.category}
-                </span>
-                <h3 className="text-lg font-extrabold text-slate-900 mt-2">
-                  {selectedOpp.title}
-                </h3>
-                <p className="text-xs text-slate-500 font-bold mt-1">
-                  {t(language, 'workSource')}: <span className="text-slate-800 font-extrabold">{selectedOpp.source || selectedOpp.company}</span>
-                </p>
-              </div>
-              <button onClick={() => setSelectedOpp(null)} className="p-1 text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {selectedOpp && (() => {
+        const displayedDetail = getDisplayedJobText(selectedOpp);
+        const isTranslatingModal = translatingJobId === selectedOpp.id;
 
-            <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl text-center border border-slate-200">
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'safetyCheck')}</div>
-                <div className="text-base font-extrabold text-emerald-700">{selectedOpp.score ?? selectedOpp.totalScore}%</div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'scamLikelihood')}</div>
-                <div className="text-xs font-extrabold text-rose-600">{selectedOpp.riskScore ?? 0}%</div>
-              </div>
-              <div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'payoutAmount')}</div>
-                <div className="text-sm font-extrabold text-emerald-800">${(selectedOpp.reward ?? selectedOpp.rawPayoutUSD).toLocaleString()} USD</div>
-              </div>
-            </div>
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+            <div className="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-5 animate-fadeIn max-h-[90vh] overflow-y-auto text-slate-900">
+              <div className="flex items-start justify-between pb-3 border-b border-slate-100 gap-3">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-xs font-bold text-emerald-800 px-2.5 py-1 bg-emerald-100 rounded-lg">
+                      {t(language, 'jobCategory')}: {selectedOpp.category}
+                    </span>
 
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
-                {t(language, 'jobCategory')} والتفاصيل
-              </h4>
-              <p className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                {selectedOpp.description}
-              </p>
-            </div>
+                    {/* أزرار تبديل اللغة داخل نافذة تفاصيل الوظيفة */}
+                    <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-lg">
+                      <button
+                        type="button"
+                        disabled={isTranslatingModal}
+                        onClick={(e) => handleTranslateJob(selectedOpp, 'ar', e)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                          displayedDetail.mode === 'ar'
+                            ? 'bg-sky-600 text-white'
+                            : 'text-slate-700 hover:bg-white'
+                        }`}
+                      >
+                        🇾🇪 العربية
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isTranslatingModal}
+                        onClick={(e) => handleTranslateJob(selectedOpp, 'en', e)}
+                        className={`px-2 py-0.5 rounded text-[11px] font-bold transition-all ${
+                          displayedDetail.mode === 'en'
+                            ? 'bg-sky-600 text-white'
+                            : 'text-slate-700 hover:bg-white'
+                        }`}
+                      >
+                        🇺🇸 English
+                      </button>
+                      {displayedDetail.mode !== 'original' && (
+                        <button
+                          type="button"
+                          onClick={(e) => handleTranslateJob(selectedOpp, 'original', e)}
+                          className="px-2 py-0.5 rounded text-[11px] font-bold text-slate-500 hover:bg-white"
+                        >
+                          {language === 'ar' ? 'الأصل' : 'Original'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
 
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-sky-600"></span>
-                {t(language, 'howToGetJob')}
-              </h4>
-              <div className="bg-sky-50/70 p-3.5 rounded-xl border border-sky-100 text-xs text-slate-800 space-y-1.5">
-                <div className="flex items-start gap-2">
-                  <span className="font-extrabold text-sky-700">1.</span>
-                  <span>اضغط على زر <strong className="text-emerald-800 font-extrabold">"{t(language, 'acceptAndStart')}"</strong> في الأسفل لبدء العمل رسمياً.</span>
+                  <h3
+                    dir={displayedDetail.mode === 'ar' ? 'rtl' : displayedDetail.mode === 'en' ? 'ltr' : 'auto'}
+                    className="text-lg font-extrabold text-slate-900 mt-2"
+                  >
+                    {displayedDetail.title}
+                  </h3>
+                  <p className="text-xs text-slate-500 font-bold mt-1">
+                    {t(language, 'workSource')}:{' '}
+                    <span className="text-slate-800 font-extrabold">
+                      {selectedOpp.source || selectedOpp.company}
+                    </span>
+                  </p>
                 </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-extrabold text-sky-700">2.</span>
-                  <span>يتم إرسال الشروط والمخرجات المطلوبة فوراً إلى حسابك المباشر.</span>
-                </div>
-                <div className="flex items-start gap-2">
-                  <span className="font-extrabold text-sky-700">3.</span>
-                  <span>قم بإنجاز المهام وتسليمها عبر التطبيق قبل انتهاء الوقت المحدد.</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full bg-violet-600"></span>
-                {t(language, 'howToWithdraw')}
-              </h4>
-              <div className="bg-violet-50/70 p-3.5 rounded-xl border border-violet-100 text-xs text-slate-800 space-y-1.5">
-                <p className="font-medium">
-                  بعد تسليم العمل والتحقق منه تلقائياً، يودع المبلغ المباشر <strong className="text-violet-900 font-extrabold">${(selectedOpp.reward ?? selectedOpp.rawPayoutUSD).toLocaleString()} USD</strong> في محفظتك.
-                </p>
-                <div className="text-[11px] text-slate-600 pt-1 font-semibold">
-                  يمكنك سحب الأموال مباشرة عبر محافظك المعتمدة: <strong>شامل موني (771134103)، ون كاش (730768718)، أو Binance USDT (TRC20 / BEP20 / ERC20 / SOL)</strong> من خلال قسم <strong className="text-violet-800">"المدفوعات والمحفظة"</strong>.
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-2 flex justify-between items-center gap-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    if (onUpdateOpportunityStatus) onUpdateOpportunityStatus(selectedOpp.id, 'accepted');
-                    setSelectedOpp(null);
-                  }}
-                  className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all"
-                >
-                  {t(language, 'acceptAndStart')}
-                </button>
-                <button
-                  onClick={() => {
-                    if (onUpdateOpportunityStatus) onUpdateOpportunityStatus(selectedOpp.id, 'saved');
-                    setSelectedOpp(null);
-                  }}
-                  className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl"
-                >
-                  {t(language, 'saveJob')}
+                <button onClick={() => setSelectedOpp(null)} className="p-1 text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
                 </button>
               </div>
 
-              <button
-                onClick={() => setSelectedOpp(null)}
-                className="px-4 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl"
-              >
-                {language === 'ar' ? 'إغلاق' : 'Close'}
-              </button>
+              <div className="grid grid-cols-3 gap-3 bg-slate-50 p-3.5 rounded-xl text-center border border-slate-200">
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'safetyCheck')}</div>
+                  <div className="text-base font-extrabold text-emerald-700">
+                    {selectedOpp.score ?? selectedOpp.totalScore}%
+                  </div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'scamLikelihood')}</div>
+                  <div className="text-xs font-extrabold text-rose-600">{selectedOpp.riskScore ?? 0}%</div>
+                </div>
+                <div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase">{t(language, 'payoutAmount')}</div>
+                  <div className="text-sm font-extrabold text-emerald-800">
+                    ${(selectedOpp.reward ?? selectedOpp.rawPayoutUSD).toLocaleString()} USD
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-600"></span>
+                  {t(language, 'jobCategory')} والتفاصيل
+                  {isTranslatingModal && <RefreshCw className="w-3.5 h-3.5 animate-spin text-sky-600" />}
+                </h4>
+                <p
+                  dir={displayedDetail.mode === 'ar' ? 'rtl' : displayedDetail.mode === 'en' ? 'ltr' : 'auto'}
+                  className="text-xs text-slate-700 leading-relaxed bg-slate-50 p-3.5 rounded-xl border border-slate-200"
+                >
+                  {displayedDetail.description}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-sky-600"></span>
+                  {t(language, 'howToGetJob')}
+                </h4>
+                <div className="bg-sky-50/70 p-3.5 rounded-xl border border-sky-100 text-xs text-slate-800 space-y-1.5">
+                  <div className="flex items-start gap-2">
+                    <span className="font-extrabold text-sky-700">1.</span>
+                    <span>
+                      اضغط على زر{' '}
+                      <strong className="text-emerald-800 font-extrabold">"{t(language, 'acceptAndStart')}"</strong> في
+                      الأسفل لبدء العمل رسمياً.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-extrabold text-sky-700">2.</span>
+                    <span>يتم إرسال الشروط والمخرجات المطلوبة فوراً إلى حسابك المباشر.</span>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <span className="font-extrabold text-sky-700">3.</span>
+                    <span>قم بإنجاز المهام وتسليمها عبر التطبيق قبل انتهاء الوقت المحدد.</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <h4 className="text-xs font-bold text-slate-900 uppercase tracking-wide flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-violet-600"></span>
+                  {t(language, 'howToWithdraw')}
+                </h4>
+                <div className="bg-violet-50/70 p-3.5 rounded-xl border border-violet-100 text-xs text-slate-800 space-y-1.5">
+                  <p className="font-medium">
+                    بعد تسليم العمل والتحقق منه تلقائياً، يودع المبلغ المباشر{' '}
+                    <strong className="text-violet-900 font-extrabold">
+                      ${(selectedOpp.reward ?? selectedOpp.rawPayoutUSD).toLocaleString()} USD
+                    </strong>{' '}
+                    في محفظتك.
+                  </p>
+                  <div className="text-[11px] text-slate-600 pt-1 font-semibold">
+                    يمكنك سحب الأموال عبر:{' '}
+                    <strong>بنك الكريمي (3181903553)، شامل موني (771134103)، ون كاش (730768718)، أو Binance USDT</strong>{' '}
+                    من خلال قسم <strong className="text-violet-800">"المدفوعات والمحفظة"</strong>.
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 flex justify-between items-center gap-2">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      if (onUpdateOpportunityStatus) onUpdateOpportunityStatus(selectedOpp.id, 'accepted');
+                      setSelectedOpp(null);
+                    }}
+                    className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-extrabold rounded-xl shadow-xs transition-all"
+                  >
+                    {t(language, 'acceptAndStart')}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (onUpdateOpportunityStatus) onUpdateOpportunityStatus(selectedOpp.id, 'saved');
+                      setSelectedOpp(null);
+                    }}
+                    className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-800 text-xs font-bold rounded-xl"
+                  >
+                    {t(language, 'saveJob')}
+                  </button>
+                </div>
+
+                <button
+                  onClick={() => setSelectedOpp(null)}
+                  className="px-4 py-2.5 bg-slate-900 text-white text-xs font-bold rounded-xl"
+                >
+                  {language === 'ar' ? 'إغلاق' : 'Close'}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 };
