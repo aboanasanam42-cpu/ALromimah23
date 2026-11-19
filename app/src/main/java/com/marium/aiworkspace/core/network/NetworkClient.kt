@@ -32,7 +32,7 @@ class NetworkClient(private val context: Context? = null) {
         var connection: HttpURLConnection? = null
         try {
             val url = URL(endpoint)
-            connection = (url.openConnection() as HttpURLConnection).apply {
+            val conn = (url.openConnection() as HttpURLConnection).apply {
                 requestMethod = method
                 connectTimeout = 15_000
                 readTimeout = 15_000
@@ -49,12 +49,13 @@ class NetworkClient(private val context: Context? = null) {
                     }
                 }
             }
+            connection = conn
 
-            val responseCode = connection.responseCode
+            val responseCode = conn.responseCode
             val stream = if (responseCode in 200..299) {
-                connection.inputStream
+                conn.inputStream
             } else {
-                connection.errorStream ?: connection.inputStream
+                conn.errorStream ?: conn.inputStream
             }
             val responseText = BufferedReader(InputStreamReader(stream, Charsets.UTF_8)).use { it.readText() }
 
