@@ -4,20 +4,12 @@ import { t } from '../utils/localization';
 import {
   Settings,
   Globe,
-  HardDrive,
-  Cloud,
-  ShieldCheck,
-  Bell,
-  Fingerprint,
   Save,
   CheckCircle2,
   GitBranch,
-  KeyRound,
   Copy,
   Check,
-  ExternalLink,
   Smartphone,
-  Layers
 } from 'lucide-react';
 
 interface SettingsViewProps {
@@ -33,19 +25,33 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   workMode,
   onWorkModeChange,
 }) => {
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [biometricsRequired, setBiometricsRequired] = useState(true);
-  const [autoCloudSync, setAutoCloudSync] = useState(true);
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
+  const REPO_URL = 'https://github.com/aboanasanam42-cpu/ALromimah23.git';
+
   const handleSave = () => {
+    try {
+      localStorage.setItem('marium_language', language);
+      localStorage.setItem('marium_work_mode', workMode);
+    } catch {
+      // تجاهل أخطاء التخزين في الوضع الخاص
+    }
     setSavedSuccess(true);
     setTimeout(() => setSavedSuccess(false), 3000);
   };
 
-  const copyToClipboard = (text: string, keyName: string) => {
-    navigator.clipboard.writeText(text);
+  const copyToClipboard = async (text: string, keyName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textarea);
+    }
     setCopiedKey(keyName);
     setTimeout(() => setCopiedKey(null), 2000);
   };
@@ -97,12 +103,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             <div className="flex items-center justify-between">
               <span className="text-slate-400 font-bold">مستودع الأكواد (Repository URL):</span>
               <button
-                onClick={() =>
-                  copyToClipboard(
-                    'https://github.com/aboanasanam42-cpu/https-github.com-aboanasanam42-cpu-ALromimah23.git',
-                    'repo'
-                  )
-                }
+                onClick={() => copyToClipboard(REPO_URL, 'repo')}
                 className="text-purple-300 hover:text-white flex items-center gap-1 font-bold"
               >
                 {copiedKey === 'repo' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
@@ -110,7 +111,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
               </button>
             </div>
             <div className="font-mono text-purple-200 text-[11px] break-all bg-black/40 p-2 rounded-xl border border-purple-500/20">
-              https://github.com/aboanasanam42-cpu/https-github.com-aboanasanam42-cpu-ALromimah23.git
+              {REPO_URL}
             </div>
           </div>
 
@@ -127,7 +128,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
       </div>
 
-      {/* Android Keystore Fingerprints & App Integrity (User Provided Credentials) */}
+      {/* Android Keystore Fingerprints */}
       <div className="bg-[#151034] rounded-3xl p-6 border border-purple-500/30 shadow-xl space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -142,7 +143,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         </div>
 
         <div className="space-y-3 text-xs">
-          {/* SHA-1 Fingerprint */}
           <div className="p-3.5 bg-[#120d2c] rounded-2xl border border-purple-500/20 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-slate-300 font-bold">SHA-1 Fingerprint (Google Sign-In / Firebase Auth):</span>
@@ -161,7 +161,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* SHA-256 Fingerprint */}
           <div className="p-3.5 bg-[#120d2c] rounded-2xl border border-purple-500/20 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-slate-300 font-bold">SHA-256 Fingerprint (App Integrity / Phone Auth):</span>
@@ -183,7 +182,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             </div>
           </div>
 
-          {/* MD5 Fingerprint */}
           <div className="p-3.5 bg-[#120d2c] rounded-2xl border border-purple-500/20 space-y-1.5">
             <div className="flex items-center justify-between">
               <span className="text-slate-300 font-bold">MD5 Fingerprint:</span>
@@ -236,7 +234,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className="text-lg">🇸🇦</span>
+              <span className="text-lg">🇾🇪</span>
               <span>العربية (AR)</span>
             </div>
             {language === 'ar' && <CheckCircle2 className="w-4 h-4 text-purple-400" />}
