@@ -17,18 +17,84 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.marium.aiworkspace.ai.analyzer.AIAnalyzer
-import com.marium.aiworkspace.ai.analyzer.TranslatedJobResult
 import com.marium.aiworkspace.opportunities.data.OpportunityDataSource
 import com.marium.aiworkspace.opportunities.data.RemoteOpportunity
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import org.json.JSONObject
+import java.io.BufferedReader
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.HttpURLConnection
+import java.net.URL
+
+private data class JobTranslation(
+    val title: String,
+    val description: String
+)
+
+private suspend fun translateOpportunityText(
+    title: String,
+    description: String,
+    targetLang: String
+): Result<JobTranslation> = withContext(Dispatchers.IO) {
+    var connection: HttpURLConnection? = null
+    try {
+        val url = URL("https://a-lromimah23.vercel.app/api/translate")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            requestMethod = "POST"
+            setRequestProperty("Content-Type", "application/json; charset=UTF-8")
+            setRequestProperty("Accept", "application/json")
+            doOutput = true
+            doInput = true
+            connectTimeout = 20_000
+            readTimeout = 20_000
+        }
+        connection = conn
+
+        val payload = JSONObject().apply {
+            put("title", title)
+            put("description", description)
+            put("targetLang", targetLang)
+        }
+
+        OutputStreamWriter(conn.outputStream, "UTF-8").use { writer ->
+            writer.write(payload.toString())
+            writer.flush()
+        }
+
+        val responseCode = conn.responseCode
+        val stream = if (responseCode in 200..299) {
+            conn.inputStream
+        } else {
+            conn.errorStream ?: conn.inputStream
+        }
+        val responseText = BufferedReader(InputStreamReader(stream, "UTF-8")).use { it.readText() }
+
+        if (responseCode !in 200..299) {
+            return@withContext Result.failure(Exception("HTTP $responseCode"))
+        }
+
+        val json = JSONObject(responseText)
+        Result.success(
+            JobTranslation(
+                title = json.optString("title", title),
+                description = json.optString("description", description)
+            )
+        )
+    } catch (e: Exception) {
+        Result.failure(e)
+    } finally {
+        connection?.disconnect()
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun OpportunitiesScreen(navController: NavController) {
     val context = LocalContext.current
     val source = remember { OpportunityDataSource() }
-    val analyzer = remember { AIAnalyzer() }
     val coroutineScope = rememberCoroutineScope()
 
     var opportunities by remember { mutableStateOf<List<RemoteOpportunity>>(emptyList()) }
@@ -36,7 +102,6 @@ fun OpportunitiesScreen(navController: NavController) {
     var message by remember { mutableStateOf("جاري تحميل الفرص الحقيقية...") }
     var refreshToken by remember { mutableIntStateOf(0) }
 
-    // تخزين الترجمات وحالة اللغة لكل وظيفة
     var translations by remember { mutableStateOf>>(emptyMap()) }
     var activeLangByJob by remember { mutableStateOf>(emptyMap()) }
     var translatingJobId by remember { mutableStateOf<String?>(null) }
@@ -109,7 +174,6 @@ fun OpportunitiesScreen(navController: NavController) {
 
                                     Spacer(Modifier.width(8.dp))
 
-                                    // زر اختيار لغة الوظيفة (عربي / إنجليزي)
                                     Box {
                                         OutlinedButton(
                                             onClick = { menuExpanded = true },
@@ -147,7 +211,7 @@ fun OpportunitiesScreen(navController: NavController) {
                                                     } else {
                                                         coroutineScope.launch {
                                                             translatingJobId = job.id
-                                                            val res = analyzer.translateJob(
+                                                            val res = translateOpportunityText(
                                                                 job.title,
                                                                 job.description.take(800),
                                                                 "ar"
@@ -172,7 +236,7 @@ fun OpportunitiesScreen(navController: NavController) {
                                                     } else {
                                                         coroutineScope.launch {
                                                             translatingJobId = job.id
-                                                            val res = analyzer.translateJob(
+                                                            val res = translateOpportunityText(
                                                                 job.title,
                                                                 job.description.take(800),
                                                                 "en"
