@@ -64,7 +64,7 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
             val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
 
             if (responseCode !in 200..299) {
-                return@withContext Result.failure(Exception("HTTP Error $responseCode:$responseText"))
+                return@withContext Result.failure(Exception("HTTP Error $responseCode: $responseText"))
             }
 
             val json = JSONObject(responseText)
@@ -142,7 +142,7 @@ class AIAnalyzer(private val baseUrl: String = "https://a-lromimah23.vercel.app"
 
             val responseText = BufferedReader(InputStreamReader(responseStream, "UTF-8")).use { it.readText() }
             if (responseCode !in 200..299) {
-                return@withContext Result.failure(Exception("HTTP Error $responseCode:$responseText"))
+                return@withContext Result.failure(Exception("HTTP Error $responseCode: $responseText"))
             }
 
             val json = JSONObject(responseText)
